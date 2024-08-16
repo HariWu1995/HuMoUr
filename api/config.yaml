@@ -1,0 +1,23 @@
+TAGS:
+  - name: HuMoRapiD
+    description: API-Wrapper for Human Motion diffusion model
+
+VERSION: 1.0.0
+
+SERVER:
+  host: 0.0.0.0
+  port: 8080
+  log_level: info
+  workers: 
+
+DESCRIPTION:
+  title: HuMoRapiD
+  overview: API-Wrapper for Human Motion diffusion model
+
+PARAMETERS:
+  face_segmentor_dir: Path to Face-Segmentation Model
+  cuda_device_id: GPU Id to load Model(s)
+  offload_to_cpu: "Whether to offload all models to CPU, reducing memory usage with a low impact on performance.\nMore details: find `enable_model_cpu_offload` in https://huggingface.co/docs/diffusers/en/api/pipelines/overview"
+
+  face_image: "Image of face"
+  pose_image: "Image of human pose to swap face with 'face_image'"

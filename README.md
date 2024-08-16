@@ -111,10 +111,16 @@ pip install git+https://github.com/openai/CLIP.git
 Download dependencies:
 
 <details>
-  <summary><b>Text to Motion</b></summary>
+  <summary><b>Samples</b></summary>
 
 ```bash
 bash prepare/download_smpl_files.sh
+```
+
+<details>
+  <summary><b>Text to Motion</b></summary>
+
+```bash
 bash prepare/download_glove.sh
 bash prepare/download_t2m_evaluators.sh
 ```
@@ -124,7 +130,6 @@ bash prepare/download_t2m_evaluators.sh
   <summary><b>Action to Motion</b></summary>
 
 ```bash
-bash prepare/download_smpl_files.sh
 bash prepare/download_recognition_models.sh
 ```
 </details>
@@ -133,7 +138,6 @@ bash prepare/download_recognition_models.sh
   <summary><b>Unconstrained</b></summary>
 
 ```bash
-bash prepare/download_smpl_files.sh
 bash prepare/download_recognition_models.sh
 bash prepare/download_recognition_unconstrained_models.sh
 ```

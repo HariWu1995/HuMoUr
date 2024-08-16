@@ -41,15 +41,34 @@ def get_model_args(args, data):
         njoints = 251
         nfeats = 1
 
-    return {'modeltype': '', 'njoints': njoints, 'nfeats': nfeats, 'num_actions': num_actions,
-            'translation': True, 'pose_rep': 'rot6d', 'glob': True, 'glob_rot': True,
-            'latent_dim': args.latent_dim, 'ff_size': 1024, 'num_layers': args.layers, 'num_heads': 4,
-            'dropout': 0.1, 'activation': "gelu", 'data_rep': data_rep, 'cond_mode': cond_mode,
-            'cond_mask_prob': args.cond_mask_prob, 'action_emb': action_emb, 'arch': args.arch,
-            'emb_trans_dec': args.emb_trans_dec, 'clip_version': clip_version, 'dataset': args.dataset}
+    return {
+        'modeltype': '', 
+        'njoints': njoints, 
+        'nfeats': nfeats, 
+        'num_actions': num_actions,
+        'translation': True, 
+        'pose_rep': 'rot6d', 
+        'glob': True, 
+        'glob_rot': True,
+        'latent_dim': args.latent_dim, 
+        'ff_size': 1024, 
+        'num_layers': args.layers, 
+        'num_heads': 4,
+        'dropout': 0.1, 
+        'activation': "gelu", 
+        'data_rep': data_rep, 
+        'cond_mode': cond_mode,
+        'cond_mask_prob': args.cond_mask_prob, 
+        'action_emb': action_emb, 
+        'arch': args.arch,
+        'emb_trans_dec': args.emb_trans_dec, 
+        'clip_version': clip_version, 
+        'dataset': args.dataset,
+    }
 
 
 def create_gaussian_diffusion(args):
+
     # default params
     predict_xstart = True  # we always predict x_start (a.k.a. x0), that's our deal!
     steps = args.diffusion_steps
@@ -67,18 +86,11 @@ def create_gaussian_diffusion(args):
     return SpacedDiffusion(
         use_timesteps=space_timesteps(steps, timestep_respacing),
         betas=betas,
-        model_mean_type=(
-            gd.ModelMeanType.EPSILON if not predict_xstart else gd.ModelMeanType.START_X
-        ),
-        model_var_type=(
-            (
-                gd.ModelVarType.FIXED_LARGE
-                if not args.sigma_small
-                else gd.ModelVarType.FIXED_SMALL
-            )
-            if not learn_sigma
-            else gd.ModelVarType.LEARNED_RANGE
-        ),
+        model_mean_type=(gd.ModelMeanType.EPSILON if not predict_xstart \
+                    else gd.ModelMeanType.START_X),
+        model_var_type=((gd.ModelVarType.FIXED_LARGE if not args.sigma_small \
+                    else gd.ModelVarType.FIXED_SMALL) if not learn_sigma \
+                    else gd.ModelVarType.LEARNED_RANGE),
         loss_type=loss_type,
         rescale_timesteps=rescale_timesteps,
         lambda_vel=args.lambda_vel,

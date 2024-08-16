@@ -4,18 +4,21 @@ from typing import Any, List, Optional
 from argparse import Namespace
 
 import torch
+
 from cog import BasePredictor, Input, Path, BaseModel
 
 import data_loaders.humanml.utils.paramUtil as paramUtil
-from data_loaders.get_data import get_dataset_loader
-from data_loaders.humanml.scripts.motion_process import recover_from_ric
-from data_loaders.humanml.utils.plot_script import plot_3d_motion
 from data_loaders.tensors import collate
-from model.cfg_sampler import ClassifierFreeSampleModel
+from data_loaders.get_data import get_dataset_loader
+from data_loaders.humanml.utils.plot_script import plot_3d_motion
+from data_loaders.humanml.scripts.motion_process import recover_from_ric
+
 from utils import dist_util
 from utils.model_util import create_model_and_diffusion, load_model_wo_clip
-from visualize.motions2hik import motions2hik
+
+from model.cfg_sampler import ClassifierFreeSampleModel
 from sample.generate import construct_template_variables
+from visualize.motions2hik import motions2hik
 
 """
 In case of matplot lib issues it may be needed to delete model/data_loaders/humanml/utils/plot_script.py" in lines 89~92 as
@@ -51,6 +54,7 @@ def get_args():
 
 
 class Predictor(BasePredictor):
+
     def setup(self):
         subprocess.run(["mkdir", "/root/.cache/clip"])
         subprocess.run(["cp", "-r", "ViT-B-32.pt", "/root/.cache/clip"])

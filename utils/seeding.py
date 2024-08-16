@@ -3,7 +3,10 @@ import torch
 import random
 
 
-def fixseed(seed):
+def fix_seed(seed):
+    """
+    For reproducibility
+    """
     torch.backends.cudnn.benchmark = False
     random.seed(seed)
     np.random.seed(seed)

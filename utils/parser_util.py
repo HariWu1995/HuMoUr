@@ -45,6 +45,7 @@ def get_args_per_group_name(parser, args, group_name):
             return list(argparse.Namespace(**group_dict).__dict__.keys())
     return ValueError('group_name was not found.')
 
+
 def get_model_path_from_args():
     try:
         dummy_parser = ArgumentParser()
@@ -95,7 +96,6 @@ def add_model_options(parser):
                             "Currently tested on HumanAct12 only.")
 
 
-
 def add_data_options(parser):
     group = parser.add_argument_group('dataset')
     group.add_argument("--dataset", default='humanml', choices=['humanml', 'kit', 'humanact12', 'uestc'], type=str,
@@ -142,7 +142,7 @@ def add_sampling_options(parser):
     group = parser.add_argument_group('sampling')
     group.add_argument("--model_path", required=True, type=str,
                        help="Path to model####.pt file to be sampled.")
-    group.add_argument("--output_dir", default='', type=str,
+    group.add_argument("--output_dir", default='output', type=str,
                        help="Path to results dir (auto created by the script). "
                             "If empty, will create dir in parallel to checkpoint.")
     group.add_argument("--num_samples", default=10, type=int,
@@ -223,6 +223,7 @@ def train_args():
 
 def generate_args():
     parser = ArgumentParser()
+    
     # args specified by the user: (all other will be loaded from the model)
     add_base_options(parser)
     add_sampling_options(parser)

@@ -3,33 +3,41 @@
 Generate a large batch of image samples from a model and save them as a large
 numpy array. This can be used to produce samples for FID evaluation.
 """
-from utils.fixseed import fixseed
 import os
+import shutil
+
 import numpy as np
 import torch
-from utils.parser_util import generate_args
-from utils.model_util import create_model_and_diffusion, load_model_wo_clip
+
 from utils import dist_util
+from utils.seeding import fix_seed
+from utils.model_util import create_model_and_diffusion, load_model_wo_clip
+from utils.parser_util import generate_args
+
 from model.cfg_sampler import ClassifierFreeSampleModel
-from data_loaders.get_data import get_dataset_loader
-from data_loaders.humanml.scripts.motion_process import recover_from_ric
+
 import data_loaders.humanml.utils.paramUtil as paramUtil
-from data_loaders.humanml.utils.plot_script import plot_3d_motion
-import shutil
 from data_loaders.tensors import collate
+from data_loaders.get_data import get_dataset_loader
+from data_loaders.humanml.utils.plot_script import plot_3d_motion
+from data_loaders.humanml.scripts.motion_process import recover_from_ric
 
 
 def main():
     args = generate_args()
-    fixseed(args.seed)
+    fix_seed(args.seed)
+    
     out_path = args.output_dir
     name = os.path.basename(os.path.dirname(args.model_path))
     niter = os.path.basename(args.model_path).replace('model', '').replace('.pt', '')
+
     max_frames = 196 if args.dataset in ['kit', 'humanml'] else 60
     fps = 12.5 if args.dataset == 'kit' else 20
     n_frames = min(max_frames, int(args.motion_length*fps))
+    
     is_using_data = not any([args.input_text, args.text_prompt, args.action_file, args.action_name])
     dist_util.setup_dist(args.device)
+
     if out_path == '':
         out_path = os.path.join(os.path.dirname(args.model_path),
                                 'samples_{}_{}_seed{}'.format(name, niter, args.seed))
@@ -42,15 +50,18 @@ def main():
     if args.text_prompt != '':
         texts = [args.text_prompt]
         args.num_samples = 1
+
     elif args.input_text != '':
         assert os.path.exists(args.input_text)
         with open(args.input_text, 'r') as fr:
             texts = fr.readlines()
         texts = [s.replace('\n', '') for s in texts]
         args.num_samples = len(texts)
+
     elif args.action_name:
         action_text = [args.action_name]
         args.num_samples = 1
+
     elif args.action_file != '':
         assert os.path.exists(args.action_file)
         with open(args.action_file, 'r') as fr:

@@ -2,6 +2,7 @@ from torch.utils.data import DataLoader
 from data_loaders.tensors import collate as all_collate
 from data_loaders.tensors import t2m_collate
 
+
 def get_dataset_class(name):
     if name == "amass":
         from .amass import AMASS
@@ -20,6 +21,7 @@ def get_dataset_class(name):
         return KIT
     else:
         raise ValueError(f'Unsupported dataset name [{name}]')
+
 
 def get_collate_fn(name, hml_mode='train'):
     if hml_mode == 'gt':

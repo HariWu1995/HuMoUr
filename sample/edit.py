@@ -3,31 +3,38 @@
 Generate a large batch of image samples from a model and save them as a large
 numpy array. This can be used to produce samples for FID evaluation.
 """
-from utils.fixseed import fixseed
 import os
+import shutil
+
 import numpy as np
 import torch
-from utils.parser_util import edit_args
-from utils.model_util import create_model_and_diffusion, load_model_wo_clip
+
 from utils import dist_util
+from utils.seeding import fix_seed
+from utils.model_util import create_model_and_diffusion, load_model_wo_clip
+from utils.parser_util import edit_args
+
 from model.cfg_sampler import ClassifierFreeSampleModel
-from data_loaders.get_data import get_dataset_loader
-from data_loaders.humanml.scripts.motion_process import recover_from_ric
-from data_loaders import humanml_utils
+
 import data_loaders.humanml.utils.paramUtil as paramUtil
+from data_loaders import humanml_utils
+from data_loaders.get_data import get_dataset_loader
 from data_loaders.humanml.utils.plot_script import plot_3d_motion
-import shutil
+from data_loaders.humanml.scripts.motion_process import recover_from_ric
 
 
 def main():
     args = edit_args()
-    fixseed(args.seed)
+    fix_seed(args.seed)
+
     out_path = args.output_dir
     name = os.path.basename(os.path.dirname(args.model_path))
     niter = os.path.basename(args.model_path).replace('model', '').replace('.pt', '')
+    
     max_frames = 196 if args.dataset in ['kit', 'humanml'] else 60
     fps = 12.5 if args.dataset == 'kit' else 20
     dist_util.setup_dist(args.device)
+    
     if out_path == '':
         out_path = os.path.join(os.path.dirname(args.model_path),
                                 'edit_{}_{}_{}_seed{}'.format(name, niter, args.edit_mode, args.seed))
@@ -66,6 +73,7 @@ def main():
     input_motions = input_motions.to(dist_util.dev())
     texts = [args.text_condition] * args.num_samples
     model_kwargs['y']['text'] = texts
+
     if args.text_condition == '':
         args.guidance_param = 0.  # Force unconditioned generation
 
@@ -73,6 +81,7 @@ def main():
     assert max_frames == input_motions.shape[-1]
     gt_frames_per_sample = {}
     model_kwargs['y']['inpainted_motion'] = input_motions
+    
     if args.edit_mode == 'in_between':
         model_kwargs['y']['inpainting_mask'] = torch.ones_like(input_motions, dtype=torch.bool,
                                                                device=input_motions.device)  # True means use gt motion
@@ -81,6 +90,7 @@ def main():
             gt_frames_per_sample[i] = list(range(0, start_idx)) + list(range(end_idx, max_frames))
             model_kwargs['y']['inpainting_mask'][i, :, :,
             start_idx: end_idx] = False  # do inpainting in those frames
+
     elif args.edit_mode == 'upper_body':
         model_kwargs['y']['inpainting_mask'] = torch.tensor(humanml_utils.HML_LOWER_BODY_MASK, dtype=torch.bool,
                                                             device=input_motions.device)  # True is lower body data
@@ -98,7 +108,6 @@ def main():
         model_kwargs['y']['scale'] = torch.ones(args.batch_size, device=dist_util.dev()) * args.guidance_param
 
         sample_fn = diffusion.p_sample_loop
-
         sample = sample_fn(
             model,
             (args.batch_size, model.njoints, model.nfeats, max_frames),
@@ -112,7 +121,6 @@ def main():
             const_noise=False,
         )
 
-
         # Recover XYZ *positions* from HumanML3D vector representation
         if model.data_rep == 'hml_vec':
             n_joints = 22 if sample.shape[1] == 263 else 21
@@ -125,7 +133,6 @@ def main():
         all_lengths.append(model_kwargs['y']['lengths'].cpu().numpy())
 
         print(f"created {len(all_motions) * args.batch_size} samples")
-
 
     all_motions = np.concatenate(all_motions, axis=0)
     all_motions = all_motions[:total_num_samples]  # [bs, njoints, 6, seqlen]
@@ -155,7 +162,6 @@ def main():
         input_motions = recover_from_ric(input_motions, n_joints)
         input_motions = input_motions.view(-1, *input_motions.shape[2:]).permute(0, 2, 3, 1).cpu().numpy()
 
-
     for sample_i in range(args.num_samples):
         caption = 'Input Motion'
         length = model_kwargs['y']['lengths'][sample_i]
@@ -164,15 +170,18 @@ def main():
         animation_save_path = os.path.join(out_path, save_file)
         rep_files = [animation_save_path]
         print(f'[({sample_i}) "{caption}" | -> {save_file}]')
+
         plot_3d_motion(animation_save_path, skeleton, motion, title=caption,
                        dataset=args.dataset, fps=fps, vis_mode='gt',
                        gt_frames=gt_frames_per_sample.get(sample_i, []))
+
         for rep_i in range(args.num_repetitions):
             caption = all_text[rep_i*args.batch_size + sample_i]
             if caption == '':
                 caption = 'Edit [{}] unconditioned'.format(args.edit_mode)
             else:
                 caption = 'Edit [{}]: {}'.format(args.edit_mode, caption)
+                
             length = all_lengths[rep_i*args.batch_size + sample_i]
             motion = all_motions[rep_i*args.batch_size + sample_i].transpose(2, 0, 1)[:length]
             save_file = 'sample{:02d}_rep{:02d}.mp4'.format(sample_i, rep_i)

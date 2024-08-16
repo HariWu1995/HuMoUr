@@ -1,3 +1,27 @@
+"""
+    The transformation matrices returned from the functions in this file assume
+    the points on which the transformation will be applied are column vectors.
+    i.e. the R matrix is structured as
+
+        R = [
+                [Rxx, Rxy, Rxz],
+                [Ryx, Ryy, Ryz],
+                [Rzx, Rzy, Rzz],
+            ]  # (3, 3)
+
+    This matrix can be applied to column vectors by post multiplication
+    by the points e.g.
+
+        points = [[0], [1], [2]]  # (3 x 1) xyz coordinates of a point
+        transformed_points = R * points
+
+    To apply the same matrix to points which are row vectors, the R matrix
+    can be transposed and pre multiplied by the points:
+
+    e.g.
+        points = [[0, 1, 2]]  # (1 x 3) xyz coordinates of a point
+        transformed_points = points * R.transpose(1, 0)
+"""
 # This code is based on https://github.com/Mathux/ACTOR.git
 # Copyright (c) Facebook, Inc. and its affiliates. All rights reserved.
 # Check PYTORCH3D_LICENCE before use
@@ -7,32 +31,6 @@ from typing import Optional
 
 import torch
 import torch.nn.functional as F
-
-
-"""
-The transformation matrices returned from the functions in this file assume
-the points on which the transformation will be applied are column vectors.
-i.e. the R matrix is structured as
-
-    R = [
-            [Rxx, Rxy, Rxz],
-            [Ryx, Ryy, Ryz],
-            [Rzx, Rzy, Rzz],
-        ]  # (3, 3)
-
-This matrix can be applied to column vectors by post multiplication
-by the points e.g.
-
-    points = [[0], [1], [2]]  # (3 x 1) xyz coordinates of a point
-    transformed_points = R * points
-
-To apply the same matrix to points which are row vectors, the R matrix
-can be transposed and pre multiplied by the points:
-
-e.g.
-    points = [[0, 1, 2]]  # (1 x 3) xyz coordinates of a point
-    transformed_points = points * R.transpose(1, 0)
-"""
 
 
 def quaternion_to_matrix(quaternions):
@@ -132,7 +130,6 @@ def _axis_angle_rotation(axis: str, angle):
     Returns:
         Rotation matrices as tensor of shape (..., 3, 3).
     """
-
     cos = torch.cos(angle)
     sin = torch.sin(angle)
     one = torch.ones_like(angle)
@@ -194,7 +191,6 @@ def _angle_from_tan(
         Euler Angles in radians for each matrix in dataset as a tensor
         of shape (...).
     """
-
     i1, i2 = {"X": (2, 1), "Y": (0, 2), "Z": (1, 0)}[axis]
     if horizontal:
         i2, i1 = i1, i2
@@ -525,7 +521,6 @@ def rotation_6d_to_matrix(d6: torch.Tensor) -> torch.Tensor:
     IEEE Conference on Computer Vision and Pattern Recognition, 2019.
     Retrieved from http://arxiv.org/abs/1812.07035
     """
-
     a1, a2 = d6[..., :3], d6[..., 3:]
     b1 = F.normalize(a1, dim=-1)
     b2 = a2 - (b1 * a2).sum(-1, keepdim=True) * b1
