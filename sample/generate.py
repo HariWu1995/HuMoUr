@@ -121,7 +121,6 @@ def main():
             model_kwargs['y']['scale'] = torch.ones(args.batch_size, device=dist_util.dev()) * args.guidance_param
 
         sample_fn = diffusion.p_sample_loop
-
         sample = sample_fn(
             model,
             # (args.batch_size, model.njoints, model.nfeats, n_frames),  # BUG FIX - this one caused a mismatch between training and inference
@@ -132,7 +131,7 @@ def main():
             init_image=None,
             progress=True,
             dump_steps=None,
-            noise=None,
+                noise=None,
             const_noise=False,
         )
 
@@ -145,9 +144,10 @@ def main():
 
         rot2xyz_pose_rep = 'xyz' if model.data_rep in ['xyz', 'hml_vec'] else model.data_rep
         rot2xyz_mask = None if rot2xyz_pose_rep == 'xyz' else model_kwargs['y']['mask'].reshape(args.batch_size, n_frames).bool()
-        sample = model.rot2xyz(x=sample, mask=rot2xyz_mask, pose_rep=rot2xyz_pose_rep, glob=True, translation=True,
-                               jointstype='smpl', vertstrans=True, betas=None, beta=0, glob_rot=None,
-                               get_rotations_back=False)
+        sample = model.rot2xyz(x=sample, mask=rot2xyz_mask, 
+                                     pose_rep=rot2xyz_pose_rep, glob=True, translation=True,
+                                   jointstype='smpl', vertstrans=True, betas=None, beta=0, 
+                                     glob_rot=None, get_rotations_back=False)
 
         if args.unconstrained:
             all_text += ['unconstrained'] * args.num_samples
@@ -159,7 +159,6 @@ def main():
         all_lengths.append(model_kwargs['y']['lengths'].cpu().numpy())
 
         print(f"created {len(all_motions) * args.batch_size} samples")
-
 
     all_motions = np.concatenate(all_motions, axis=0)
     all_motions = all_motions[:total_num_samples]  # [bs, njoints, 6, seqlen]
@@ -255,11 +254,11 @@ def construct_template_variables(unconstrained):
 
 
 def load_dataset(args, max_frames, n_frames):
-    data = get_dataset_loader(name=args.dataset,
-                              batch_size=args.batch_size,
-                              num_frames=max_frames,
-                              split='test',
-                              hml_mode='text_only')
+    data = get_dataset_loader(name = args.dataset,
+                        batch_size = args.batch_size,
+                        num_frames = max_frames,
+                             split = 'test',
+                          hml_mode = 'text_only')
     if args.dataset in ['kit', 'humanml']:
         data.dataset.t2m_dataset.fixed_length = n_frames
     return data

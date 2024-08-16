@@ -1,7 +1,9 @@
 import os
-from argparse import Namespace
-import re
 from os.path import join as pjoin
+from argparse import Namespace
+
+import re
+
 from data_loaders.humanml.utils.word_vectorizer import POS_enumerator
 
 
@@ -26,7 +28,7 @@ def is_number(numStr):
     return flag
 
 
-def get_opt(opt_path, device):
+def get_opt(opt_path, device = None):
     opt = Namespace()
     opt_dict = vars(opt)
 
@@ -61,6 +63,7 @@ def get_opt(opt_path, device):
         opt.joints_num = 22
         opt.dim_pose = 263
         opt.max_motion_length = 196
+
     elif opt.dataset_name == 'kit':
         opt.data_root = './dataset/KIT-ML'
         opt.motion_dir = pjoin(opt.data_root, 'new_joint_vecs')
@@ -68,6 +71,7 @@ def get_opt(opt_path, device):
         opt.joints_num = 21
         opt.dim_pose = 251
         opt.max_motion_length = 196
+
     else:
         raise KeyError('Dataset not recognized')
 

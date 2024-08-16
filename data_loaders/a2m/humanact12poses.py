@@ -12,8 +12,8 @@ class HumanAct12Poses(Dataset):
 
         super().__init__(**kargs)
 
-        pkldatafilepath = os.path.join(datapath, "humanact12poses.pkl")
-        data = pkl.load(open(pkldatafilepath, "rb"))
+        datafilepath = os.path.join(datapath, "humanact12poses.pkl")
+        data = pkl.load(open(datafilepath, "rb"))
 
         self._pose = [x for x in data["poses"]]
         self._num_frames_in_video = [p.shape[0] for p in self._pose]

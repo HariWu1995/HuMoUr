@@ -43,17 +43,17 @@ def main():
 
     print('Loading dataset...')
     assert args.num_samples <= args.batch_size, \
-        f'Please either increase batch_size({args.batch_size}) or reduce num_samples({args.num_samples})'
+        f'Please either increase batch_size ({args.batch_size}) or reduce num_samples ({args.num_samples})'
     # So why do we need this check? In order to protect GPU from a memory overload in the following line.
     # If your GPU can handle batch size larger then default, you can specify it through --batch_size flag.
     # If it doesn't, and you still want to sample more prompts, run this script with different seeds
     # (specify through the --seed flag)
     args.batch_size = args.num_samples  # Sampling a single batch from the testset, with exactly args.num_samples
-    data = get_dataset_loader(name=args.dataset,
-                              batch_size=args.batch_size,
-                              num_frames=max_frames,
-                              split='test',
-                              hml_mode='train')  # in train mode, you get both text and motion.
+    data = get_dataset_loader(name = args.dataset,
+                        batch_size = args.batch_size,
+                        num_frames = max_frames,
+                             split = 'test',
+                          hml_mode = 'train')  # in train mode, you get both text and motion.
     # data.fixed_length = n_frames
     total_num_samples = args.num_samples * args.num_repetitions
 
@@ -78,7 +78,8 @@ def main():
         args.guidance_param = 0.  # Force unconditioned generation
 
     # add inpainting mask according to args
-    assert max_frames == input_motions.shape[-1]
+    assert max_frames == input_motions.shape[-1], \
+        f"`max_frames` ({max_frames}) MUST be equal to {input_motions.shape[-1]}"
     gt_frames_per_sample = {}
     model_kwargs['y']['inpainted_motion'] = input_motions
     
