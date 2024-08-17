@@ -14,7 +14,7 @@ class HumanAct12Poses(Dataset):
 
         super().__init__(**kargs)
 
-        print('Loading dataset %s ...' % datapath)
+        print(f'Loading dataset @ {datapath} ...')
         datafilepath = os.path.join(datapath, "humanact12poses.pkl")
         data = pkl.load(open(datafilepath, "rb"))
 

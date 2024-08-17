@@ -765,7 +765,7 @@ class HumanML3D(data.Dataset):
         # opt.save_root = pjoin(abs_base_path, opt.save_root)
 
         self.opt = opt
-        print('Loading dataset %s ...' % opt.dataset_name)
+        print(f'Loading dataset @ {datapath} ...')
 
         if mode == 'gt':
             # used by T2M models (including evaluators)

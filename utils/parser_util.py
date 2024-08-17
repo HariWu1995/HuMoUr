@@ -10,6 +10,7 @@ def parse_and_load_from_model(parser):
     add_data_options(parser)
     add_model_options(parser)
     add_diffusion_options(parser)
+
     args = parser.parse_args()
     args_to_overwrite = []
     for group_name in ['dataset', 'model', 'diffusion']:
@@ -79,16 +80,13 @@ def add_diffusion_options(parser):
 
 def add_model_options(parser):
     group = parser.add_argument_group('model')
-    group.add_argument("--arch", default='trans_enc',
-                       choices=['trans_enc', 'trans_dec', 'gru'], type=str,
+    group.add_argument("--arch", default='trans_enc', choices=['trans_enc', 'trans_dec', 'gru'], type=str,
                        help="Architecture types as reported in the paper.")
     group.add_argument("--emb_trans_dec", default=False, type=bool,
                        help="For trans_dec architecture only, if true, will inject condition as a class token"
                             " (in addition to cross-attention).")
-    group.add_argument("--layers", default=8, type=int,
-                       help="Number of layers.")
-    group.add_argument("--latent_dim", default=512, type=int,
-                       help="Transformer/GRU width.")
+    group.add_argument("--layers", default=8, type=int, help="Number of layers.")
+    group.add_argument("--latent_dim", default=512, type=int, help="Transformer/GRU width.")
     group.add_argument("--cond_mask_prob", default=.1, type=float,
                        help="The probability of masking the condition during training."
                             " For classifier-free guidance learning.")
@@ -181,10 +179,8 @@ def add_edit_options(parser):
     group = parser.add_argument_group('edit')
     group.add_argument("--edit_mode", default='in_between', choices=['in_between', 'upper_body'], type=str,
                        help="Defines which parts of the input motion will be edited.\n"
-                            "(1) in_between - suffix and prefix motion taken from input motion, "
-                            "middle motion is generated.\n"
-                            "(2) upper_body - lower body joints taken from input motion, "
-                            "upper body is generated.")
+                            "(1) in_between - suffix and prefix motion taken from input motion, middle motion is generated.\n"
+                            "(2) upper_body - lower body joints taken from input motion, upper body is generated.")
     group.add_argument("--text_condition", default='', type=str,
                        help="Editing will be conditioned on this text prompt. "
                             "If empty, will perform unconditioned editing.")
@@ -200,8 +196,7 @@ def add_evaluation_options(parser):
                        help="Path to model####.pt file to be sampled.")
     group.add_argument("--eval_mode", default='wo_mm', choices=['wo_mm', 'mm_short', 'debug', 'full'], type=str,
                        help="wo_mm (t2m only) - 20 repetitions without multi-modality metric; "
-                            "mm_short (t2m only) - 5 repetitions with multi-modality metric; "
-                            "debug - short run, less accurate results."
+                            "mm_short (t2m only) - 5 repetitions with multi-modality metric; debug - short run, less accurate results."
                             "full (a2m only) - 20 repetitions.")
     group.add_argument("--guidance_param", default=2.5, type=float,
                        help="For classifier-free sampling - specifies the s parameter, as defined in the paper.")
@@ -217,17 +212,27 @@ def get_cond_mode(args):
     return cond_mode
 
 
-def train_args():
+def print_args(args):
+    args = vars(args)
+    print(json.dumps(args), indent=4)
+
+
+def train_args(verbose: bool = True):
     parser = ArgumentParser()
+
     add_base_options(parser)
     add_data_options(parser)
     add_model_options(parser)
     add_diffusion_options(parser)
     add_training_options(parser)
-    return parser.parse_args()
+
+    args = parser.parse_args()
+    if verbose:
+        print_args(args)
+    return args
 
 
-def generate_args():
+def generate_args(verbose: bool = True):
     parser = ArgumentParser()
     
     # args specified by the user: (all other will be loaded from the model)
@@ -242,22 +247,33 @@ def generate_args():
     elif (args.action_file or args.action_name) and cond_mode != 'action':
         raise Exception('Arguments action_file and action_name should not be used for a text condition. Please use input_text or text_prompt.')
 
+    if verbose:
+        print_args(args)
     return args
 
 
-def edit_args():
+def edit_args(verbose: bool = True):
     parser = ArgumentParser()
+
     # args specified by the user: (all other will be loaded from the model)
     add_base_options(parser)
     add_sampling_options(parser)
     add_edit_options(parser)
     args = parse_and_load_from_model(parser)
+
+    if verbose:
+        print_args(args)
     return args
 
 
-def evaluation_parser():
+def evaluation_parser(verbose: bool = True):
     parser = ArgumentParser()
+
     # args specified by the user: (all other will be loaded from the model)
     add_base_options(parser)
     add_evaluation_options(parser)
-    return parse_and_load_from_model(parser)
+    args = parse_and_load_from_model(parser)
+    
+    if verbose:
+        print_args(args)
+    return args

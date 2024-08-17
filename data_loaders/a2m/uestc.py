@@ -59,7 +59,7 @@ class UESTC(Dataset):
         self.view = view
         super().__init__(**kargs)
 
-        print('Loading dataset %s ...' % datapath)
+        print(f'Loading dataset @ {datapath} ...')
 
         # Load pre-computed #frames data
         with open(os.path.join(datapath, 'info', 'num_frames_min.txt'), 'r') as f:
