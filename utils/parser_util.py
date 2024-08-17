@@ -29,6 +29,8 @@ def parse_and_load_from_model(parser):
 
     for a in args_to_overwrite:
         if a in model_args.keys():
+            if a == 'data_dir':
+                continue
             setattr(args, a, model_args[a])
 
         elif 'cond_mode' in model_args: # backward compitability
@@ -46,7 +48,10 @@ def parse_and_load_from_model(parser):
 def get_args_per_group_name(parser, args, group_name):
     for group in parser._action_groups:
         if group.title == group_name:
-            group_dict = {a.dest: getattr(args, a.dest, None) for a in group._group_actions}
+            group_dict = {
+                    a.dest: getattr(args, a.dest, None) 
+                for a in group._group_actions
+            }
             return list(argparse.Namespace(**group_dict).__dict__.keys())
     return ValueError('group_name was not found.')
 
