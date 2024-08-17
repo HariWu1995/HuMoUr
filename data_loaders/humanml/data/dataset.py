@@ -750,12 +750,12 @@ class HumanML3D(data.Dataset):
         self.dataset_name = 't2m'
 
         # Configurations of T2M dataset and KIT dataset is almost the same
-        abs_base_path = kwargs.get(abs_base_path, '.')
+        abs_base_path = kwargs.get('abs_base_path', '.')
         dataset_opt_path = pjoin(abs_base_path, configpath)
         opt = get_opt(dataset_opt_path, data_root=datapath)
 
         # opt.meta_dir = pjoin(abs_base_path, opt.meta_dir)
-        opt.meta_dir = kwargs.get(meta_dir, './dataset')
+        opt.meta_dir = kwargs.get('meta_dir', './dataset')
         
         # opt.text_dir = pjoin(abs_base_path, opt.text_dir)
         # opt.model_dir = pjoin(abs_base_path, opt.model_dir)
