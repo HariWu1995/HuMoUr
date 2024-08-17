@@ -51,8 +51,7 @@ def plot_3d_motion(save_path, kinematic_tree, joints, title, dataset, figsize=(3
         xz_plane = Poly3DCollection([verts])
         xz_plane.set_facecolor((0.5, 0.5, 0.5, 0.5))
         ax.add_collection3d(xz_plane)
-
-    #         return ax
+        # return ax
 
     # (seq_len, joints_num, 3)
     data = joints.copy().reshape(len(joints), -1, 3)
@@ -68,20 +67,24 @@ def plot_3d_motion(save_path, kinematic_tree, joints, title, dataset, figsize=(3
     fig = plt.figure(figsize=figsize)
     plt.tight_layout()
     ax = p3.Axes3D(fig)
+
     init()
+
     MINS = data.min(axis=0).min(axis=0)
     MAXS = data.max(axis=0).max(axis=0)
     colors_blue = ["#4D84AA", "#5B9965", "#61CEB9", "#34C1E2", "#80B79A"]  # GT color
     colors_orange = ["#DD5A37", "#D69E00", "#B75A39", "#FF6D00", "#DDB50E"]  # Generation color
     colors = colors_orange
+
     if vis_mode == 'upper_body':  # lower body taken fixed to input motion
         colors[0] = colors_blue[0]
         colors[1] = colors_blue[1]
+
     elif vis_mode == 'gt':
         colors = colors_blue
 
     frame_number = data.shape[0]
-    #     print(dataset.shape)
+    # print(dataset.shape)
 
     height_offset = MINS[1]
     data[:, :, 1] -= height_offset
@@ -90,24 +93,24 @@ def plot_3d_motion(save_path, kinematic_tree, joints, title, dataset, figsize=(3
     data[..., 0] -= data[:, 0:1, 0]
     data[..., 2] -= data[:, 0:1, 2]
 
-    #     print(trajec.shape)
+    # print(trajec.shape)
 
     def update(index):
-        #         print(index)
+        # print(index)
         ax.lines = []
         ax.collections = []
         ax.view_init(elev=120, azim=-90)
         ax.dist = 7.5
-        #         ax =
+        # ax =
         plot_xzPlane(MINS[0] - trajec[index, 0], MAXS[0] - trajec[index, 0], 0, MINS[2] - trajec[index, 1],
                      MAXS[2] - trajec[index, 1])
-        #         ax.scatter(dataset[index, :22, 0], dataset[index, :22, 1], dataset[index, :22, 2], color='black', s=3)
+        # ax.scatter(dataset[index, :22, 0], dataset[index, :22, 1], dataset[index, :22, 2], color='black', s=3)
 
         # if index > 1:
         #     ax.plot3D(trajec[:index, 0] - trajec[index, 0], np.zeros_like(trajec[:index, 0]),
         #               trajec[:index, 1] - trajec[index, 1], linewidth=1.0,
         #               color='blue')
-        # #             ax = plot_xzPlane(ax, MINS[0], MAXS[0], 0, MINS[2], MAXS[2])
+        #     ax = plot_xzPlane(ax, MINS[0], MAXS[0], 0, MINS[2], MAXS[2])
 
         used_colors = colors_blue if index in gt_frames else colors
         for i, (chain, color) in enumerate(zip(kinematic_tree, used_colors)):
@@ -117,7 +120,7 @@ def plot_3d_motion(save_path, kinematic_tree, joints, title, dataset, figsize=(3
                 linewidth = 2.0
             ax.plot3D(data[index, chain, 0], data[index, chain, 1], data[index, chain, 2], linewidth=linewidth,
                       color=color)
-        #         print(trajec[:index, 0].shape)
+        # print(trajec[:index, 0].shape)
 
         plt.axis('off')
         ax.set_xticklabels([])
