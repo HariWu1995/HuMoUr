@@ -51,6 +51,7 @@ def main():
     args.batch_size = args.num_samples  # Sampling a single batch from the testset, with exactly args.num_samples
     data = get_dataset_loader(name = args.dataset,
                         batch_size = args.batch_size,
+                      dataset_path = args.data_dir,
                         num_frames = max_frames,
                              split = 'test',
                           hml_mode = 'train')  # in train mode, you get both text and motion.

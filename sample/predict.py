@@ -21,12 +21,14 @@ from sample.generate import construct_template_variables
 from visualize.motions2hik import motions2hik
 
 """
-In case of matplot lib issues it may be needed to delete model/data_loaders/humanml/utils/plot_script.py" in lines 89~92 as
-suggested in https://github.com/GuyTevet/motion-diffusion-model/issues/6
+In case of matplotlib issues,
+    it may be needed to delete 
+        "model/data_loaders/humanml/utils/plot_script.py" 
+    in lines 89~92 as suggested in 
+        https://github.com/GuyTevet/motion-diffusion-model/issues/6
 """
-
-
 class ModelOutput(BaseModel):
+    
     json_file: Optional[Any]
     animation: Optional[List[Path]]
 
@@ -64,11 +66,11 @@ class Predictor(BasePredictor):
         print('Loading dataset...')
 
         # temporary data
-        self.data = get_dataset_loader(name=self.args.dataset,
-                                  batch_size=1,
-                                  num_frames=196,
-                                  split='test',
-                                  hml_mode='text_only')
+        self.data = get_dataset_loader( name=self.args.dataset,
+                                        batch_size=1,
+                                        num_frames=196,
+                                        split='test',
+                                        hml_mode='text_only',)
 
         self.data.fixed_length = float(self.num_frames)
 
@@ -101,11 +103,11 @@ class Predictor(BasePredictor):
         args = self.args
         args.num_repetitions = int(num_repetitions)
 
-        self.data = get_dataset_loader(name=self.args.dataset,
-                                  batch_size=args.num_repetitions,
-                                  num_frames=self.num_frames,
-                                  split='test',
-                                  hml_mode='text_only')
+        self.data = get_dataset_loader( name=self.args.dataset,
+                                        batch_size=args.num_repetitions,
+                                        num_frames=self.num_frames,
+                                        split='test',
+                                        hml_mode='text_only',)
 
         collate_args = [{'inp': torch.zeros(self.num_frames), 'tokens': None, 'lengths': self.num_frames, 'text': str(prompt)}]
         _, model_kwargs = collate(collate_args)

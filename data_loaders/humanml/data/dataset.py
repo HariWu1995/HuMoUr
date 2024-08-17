@@ -743,24 +743,26 @@ A wrapper class for t2m original dataset for MDM purposes
 '''
 class HumanML3D(data.Dataset):
     
-    def __init__(self, mode, datapath='./dataset/humanml_opt.txt', split="train", **kwargs):
+    def __init__(self, mode, datapath='./dataset/HumanML3D', 
+                            configpath='./dataset/humanml_opt.txt', split="train", **kwargs):
         self.mode = mode
         self.dataname = 't2m'
         self.dataset_name = 't2m'
 
         # Configurations of T2M dataset and KIT dataset is almost the same
         abs_base_path = kwargs.get(abs_base_path, '.')
-        dataset_opt_path = pjoin(abs_base_path, datapath)
-        opt = get_opt(dataset_opt_path)
+        dataset_opt_path = pjoin(abs_base_path, configpath)
+        opt = get_opt(dataset_opt_path, data_root=datapath)
 
         # opt.meta_dir = pjoin(abs_base_path, opt.meta_dir)
         opt.meta_dir = kwargs.get(meta_dir, './dataset')
-        opt.text_dir = pjoin(abs_base_path, opt.text_dir)
-        opt.model_dir = pjoin(abs_base_path, opt.model_dir)
-        opt.motion_dir = pjoin(abs_base_path, opt.motion_dir)
-        opt.checkpoints_dir = pjoin(abs_base_path, opt.checkpoints_dir)
-        opt.data_root = pjoin(abs_base_path, opt.data_root)
-        opt.save_root = pjoin(abs_base_path, opt.save_root)
+        
+        # opt.text_dir = pjoin(abs_base_path, opt.text_dir)
+        # opt.model_dir = pjoin(abs_base_path, opt.model_dir)
+        # opt.motion_dir = pjoin(abs_base_path, opt.motion_dir)
+        # opt.checkpoints_dir = pjoin(abs_base_path, opt.checkpoints_dir)
+        # opt.data_root = pjoin(abs_base_path, opt.data_root)
+        # opt.save_root = pjoin(abs_base_path, opt.save_root)
 
         self.opt = opt
         print('Loading dataset %s ...' % opt.dataset_name)
@@ -789,10 +791,10 @@ class HumanML3D(data.Dataset):
             self.t2m_dataset = Text2MotionDatasetV2(self.opt, self.mean, self.std, self.split_file, self.w_vectorizer)
             self.num_actions = 1 # dummy placeholder
 
-        assert len(self.t2m_dataset) > 1, 'You loaded an empty dataset, ' \
-                                          'it is probably because your data dir has only texts and no motions.\n' \
-                                          'To train and evaluate MDM you should get the FULL data as described ' \
-                                          'in the README file.'
+        assert len(self.t2m_dataset) > 1, \
+            'You loaded an empty dataset, ' \
+            'it is probably because the data dir has only texts and no motions.\n' \
+            'To train and evaluate MDM, please get the FULL data as described in README.'
 
     def __getitem__(self, item):
         return self.t2m_dataset.__getitem__(item)
@@ -806,5 +808,7 @@ A wrapper class for t2m original dataset for MDM purposes
 '''
 class KIT(HumanML3D):
     
-    def __init__(self, mode, datapath='./dataset/kit_opt.txt', split="train", **kwargs):
-        super(KIT, self).__init__(mode, datapath, split, **kwargs)
+    def __init__(self, mode, datapath='./dataset/KIT-ML', 
+                            configpath='./dataset/kit_opt.txt', split="train", **kwargs):
+        super(KIT, self).__init__(mode, datapath, configpath, split, **kwargs)
+

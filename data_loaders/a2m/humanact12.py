@@ -1,10 +1,12 @@
+import os
 import pickle as pkl
 import numpy as np
-import os
+
 from .dataset import Dataset
 
 
 class HumanAct12Poses(Dataset):
+    
     dataname = "humanact12"
 
     def __init__(self, datapath="dataset/HumanAct12Poses", split="train", **kargs):

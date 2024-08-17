@@ -28,27 +28,32 @@ def is_number(numStr):
     return flag
 
 
-def get_opt(opt_path, device = None):
+def get_opt(opt_path, device = None, data_root = None):
+
     opt = Namespace()
     opt_dict = vars(opt)
 
     skip = ('-------------- End ----------------',
             '------------ Options -------------',
             '\n')
+
     print('Reading', opt_path)
     with open(opt_path) as f:
+
         for line in f:
-            if line.strip() not in skip:
-                # print(line.strip())
-                key, value = line.strip().split(': ')
-                if value in ('True', 'False'):
-                    opt_dict[key] = bool(value)
-                elif is_float(value):
-                    opt_dict[key] = float(value)
-                elif is_number(value):
-                    opt_dict[key] = int(value)
-                else:
-                    opt_dict[key] = str(value)
+            if line.strip() in skip:
+                continue
+
+            # print(line.strip())
+            key, value = line.strip().split(': ')
+            if value in ('True', 'False'):
+                opt_dict[key] = bool(value)
+            elif is_float(value):
+                opt_dict[key] = float(value)
+            elif is_number(value):
+                opt_dict[key] = int(value)
+            else:
+                opt_dict[key] = str(value)
 
     # print(opt)
     opt_dict['which_epoch'] = 'latest'
@@ -57,7 +62,7 @@ def get_opt(opt_path, device = None):
     opt.meta_dir = pjoin(opt.save_root, 'meta')
 
     if opt.dataset_name == 't2m':
-        opt.data_root = './dataset/HumanML3D'
+        opt.data_root = './dataset/HumanML3D' if data_root is None else data_root
         opt.motion_dir = pjoin(opt.data_root, 'new_joint_vecs')
         opt.text_dir = pjoin(opt.data_root, 'texts')
         opt.joints_num = 22
@@ -65,7 +70,7 @@ def get_opt(opt_path, device = None):
         opt.max_motion_length = 196
 
     elif opt.dataset_name == 'kit':
-        opt.data_root = './dataset/KIT-ML'
+        opt.data_root = './dataset/KIT-ML' if data_root is None else data_root
         opt.motion_dir = pjoin(opt.data_root, 'new_joint_vecs')
         opt.text_dir = pjoin(opt.data_root, 'texts')
         opt.joints_num = 21

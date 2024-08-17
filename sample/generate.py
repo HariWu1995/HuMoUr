@@ -256,6 +256,7 @@ def construct_template_variables(unconstrained):
 def load_dataset(args, max_frames, n_frames):
     data = get_dataset_loader(name = args.dataset,
                         batch_size = args.batch_size,
+                      dataset_path = args.data_dir,
                         num_frames = max_frames,
                              split = 'test',
                           hml_mode = 'text_only')

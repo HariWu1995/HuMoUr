@@ -49,6 +49,7 @@ def get_trans_from_vibe(vibe, index, use_z=True):
 
 
 class UESTC(Dataset):
+    
     dataname = "uestc"
 
     def __init__(self, datapath="dataset/uestc", method_name="vibe", view="all", **kargs):
@@ -176,7 +177,7 @@ class UESTC(Dataset):
         # keep the test set without modification
         self._test = list(set(self._test))
 
-        action_classes_file = os.path.join(datapath, "info/action_classes.txt")
+        action_classes_file = os.path.join(datapath, 'info', 'action_classes.txt')
         with open(action_classes_file, 'r') as f:
             self._action_classes = np.array(f.read().splitlines())
 
