@@ -16,8 +16,12 @@ def parse_and_load_from_model(parser):
         args_to_overwrite += get_args_per_group_name(parser, args, group_name)
 
     # load args from model
-    model_path = get_model_path_from_args()
-    args_path = os.path.join(os.path.dirname(model_path), 'args.json')
+    if (args.model_config_path is not None) \
+    and (args.model_config_path != ''):
+        args_path = args.model_config_path
+    else:
+        model_path = get_model_path_from_args()
+        args_path = os.path.join(os.path.dirname(model_path), 'args.json')
     assert os.path.exists(args_path), 'Arguments json file was not found!'
     with open(args_path, 'r') as fr:
         model_args = json.load(fr)
@@ -142,6 +146,8 @@ def add_sampling_options(parser):
     group = parser.add_argument_group('sampling')
     group.add_argument("--model_path", required=True, type=str,
                        help="Path to model####.pt file to be sampled.")
+    group.add_argument("--model_config_path", default=None, type=str,
+                       help="Path to args.json file in model checkpoint folder.")
     group.add_argument("--output_dir", default='output', type=str,
                        help="Path to results dir (auto created by the script). "
                             "If empty, will create dir in parallel to checkpoint.")
