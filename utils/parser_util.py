@@ -151,6 +151,8 @@ def add_sampling_options(parser):
                        help="Path to model####.pt file to be sampled.")
     group.add_argument("--model_config_path", default=None, type=str,
                        help="Path to args.json file in model checkpoint folder.")
+    # group.add_argument("--human_model_path", default='./body_models/smpl', type=str,
+    #                    help="Path to 3D-model folder.")
     group.add_argument("--output_dir", default='output', type=str,
                        help="Path to results dir (auto created by the script). "
                             "If empty, will create dir in parallel to checkpoint.")
@@ -219,7 +221,10 @@ def get_cond_mode(args):
 
 def print_args(args):
     args = vars(args)
-    print(json.dumps(args, indent=4))
+
+    print('\n\n\n', '*' * 19)
+    print('Arguments:\n', json.dumps(args, indent=4))
+    print('*' * 19, '\n\n\n')
 
 
 def train_args(verbose: bool = True):

@@ -3,15 +3,18 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import clip
+
 from model.rotation2xyz import Rotation2xyz
 
 
-
 class MDM(nn.Module):
-    def __init__(self, modeltype, njoints, nfeats, num_actions, translation, pose_rep, glob, glob_rot,
+
+    def __init__(self, 
+                 modeltype, njoints, nfeats, num_actions, translation, pose_rep, glob, glob_rot,
                  latent_dim=256, ff_size=1024, num_layers=8, num_heads=4, dropout=0.1,
                  ablation=None, activation="gelu", legacy=False, data_rep='rot6d', dataset='amass', clip_dim=512,
                  arch='trans_enc', emb_trans_dec=False, clip_version=None, **kargs):
+
         super().__init__()
 
         self.legacy = legacy
@@ -73,25 +76,28 @@ class MDM(nn.Module):
                                                          num_layers=self.num_layers)
         elif self.arch == 'gru':
             print("GRU init")
-            self.gru = nn.GRU(self.latent_dim, self.latent_dim, num_layers=self.num_layers, batch_first=True)
+            self.gru = nn.GRU(self.latent_dim, self.latent_dim, 
+                                    num_layers=self.num_layers, batch_first=True)
         else:
             raise ValueError('Please choose correct architecture [trans_enc, trans_dec, gru]')
 
         self.embed_timestep = TimestepEmbedder(self.latent_dim, self.sequence_pos_encoder)
 
         if self.cond_mode != 'no_cond':
+
             if 'text' in self.cond_mode:
                 self.embed_text = nn.Linear(self.clip_dim, self.latent_dim)
                 print('EMBED TEXT')
                 print('Loading CLIP...')
                 self.clip_version = clip_version
                 self.clip_model = self.load_and_freeze_clip(clip_version)
+
             if 'action' in self.cond_mode:
                 self.embed_action = EmbedAction(self.num_actions, self.latent_dim)
                 print('EMBED ACTION')
 
-        self.output_process = OutputProcess(self.data_rep, self.input_feats, self.latent_dim, self.njoints,
-                                            self.nfeats)
+        self.output_process = OutputProcess(self.data_rep, self.input_feats, self.latent_dim, 
+                                            self.njoints, self.nfeats)
 
         self.rot2xyz = Rotation2xyz(device='cpu', dataset=self.dataset)
 

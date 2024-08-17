@@ -7,17 +7,19 @@ import contextlib
 from smplx import SMPLLayer as _SMPLLayer
 from smplx.lbs import vertices2joints
 
+from utils.config import SMPL_MODEL_PATH, JOINT_REGRESSOR_TRAIN_EXTRA
+
 
 # action2motion_joints = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 21, 24, 38]
 # change 0 and 8
 action2motion_joints = [8, 1, 2, 3, 4, 5, 6, 7, 0, 9, 10, 11, 12, 13, 14, 21, 24, 38]
 
-from utils.config import SMPL_MODEL_PATH, JOINT_REGRESSOR_TRAIN_EXTRA
-
-JOINTSTYPE_ROOT = {"a2m": 0, # action2motion
-                   "smpl": 0,
-                   "a2mpl": 0, # set(smpl, a2m)
-                   "vibe": 8}  # 0 is the 8 position: OP MidHip below
+JOINTSTYPE_ROOT = {
+    "a2m": 0, # action2motion
+    "smpl": 0,
+    "a2mpl": 0, # set(smpl, a2m)
+    "vibe": 8,  # 0 is the 8 position: OP MidHip below
+}  
 
 JOINT_MAP = {
     'OP Nose': 24, 'OP Neck': 12, 'OP RShoulder': 17,
@@ -62,8 +64,9 @@ JOINT_NAMES = [
 
 # adapted from VIBE/SPIN to output smpl_joints, vibe joints and action2motion joints
 class SMPL(_SMPLLayer):
-    """ Extension of the official SMPL implementation to support more joints """
-
+    """ 
+    Extension of the official SMPL implementation to support more joints 
+    """
     def __init__(self, model_path=SMPL_MODEL_PATH, **kwargs):
         kwargs["model_path"] = model_path
 
@@ -78,10 +81,12 @@ class SMPL(_SMPLLayer):
         smpl_indexes = np.arange(24)
         a2mpl_indexes = np.unique(np.r_[smpl_indexes, a2m_indexes])
 
-        self.maps = {"vibe": vibe_indexes,
-                     "a2m": a2m_indexes,
-                     "smpl": smpl_indexes,
-                     "a2mpl": a2mpl_indexes}
+        self.maps = {
+                        "vibe": vibe_indexes,
+                        "a2m": a2m_indexes,
+                        "smpl": smpl_indexes,
+                        "a2mpl": a2mpl_indexes,
+                    }
         
     def forward(self, *args, **kwargs):
         smpl_output = super(SMPL, self).forward(*args, **kwargs)

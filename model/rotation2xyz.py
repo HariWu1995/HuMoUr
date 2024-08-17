@@ -1,14 +1,16 @@
 # This code is based on https://github.com/Mathux/ACTOR.git
 import torch
+
 import utils.rotation_conversions as geometry
-
-
 from model.smpl import SMPL, JOINTSTYPE_ROOT
 # from .get_model import JOINTSTYPES
+
+
 JOINTSTYPES = ["a2m", "a2mpl", "smpl", "vibe", "vertices"]
 
 
 class Rotation2xyz:
+
     def __init__(self, device, dataset='amass'):
         self.device = device
         self.dataset = dataset
@@ -17,6 +19,7 @@ class Rotation2xyz:
     def __call__(self, x, mask, pose_rep, translation, glob,
                  jointstype, vertstrans, betas=None, beta=0,
                  glob_rot=None, get_rotations_back=False, **kwargs):
+
         if pose_rep == "xyz":
             return x
 

@@ -1,6 +1,7 @@
-from model.mdm import MDM
 from diffusion import gaussian_diffusion as gd
 from diffusion.respace import SpacedDiffusion, space_timesteps
+
+from model.mdm import MDM
 from utils.parser_util import get_cond_mode
 
 
@@ -36,6 +37,7 @@ def get_model_args(args, data):
         data_rep = 'hml_vec'
         njoints = 263
         nfeats = 1
+
     elif args.dataset == 'kit':
         data_rep = 'hml_vec'
         njoints = 251
