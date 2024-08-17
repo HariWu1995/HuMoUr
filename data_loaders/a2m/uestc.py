@@ -59,6 +59,8 @@ class UESTC(Dataset):
         self.view = view
         super().__init__(**kargs)
 
+        print('Loading dataset %s ...' % datapath)
+
         # Load pre-computed #frames data
         with open(os.path.join(datapath, 'info', 'num_frames_min.txt'), 'r') as f:
             num_frames_video = np.asarray([int(s) for s in f.read().splitlines()])
