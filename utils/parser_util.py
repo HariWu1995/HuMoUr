@@ -214,7 +214,7 @@ def get_cond_mode(args):
 
 def print_args(args):
     args = vars(args)
-    print(json.dumps(args), indent=4)
+    print(json.dumps(args, indent=4))
 
 
 def train_args(verbose: bool = True):
@@ -273,7 +273,7 @@ def evaluation_parser(verbose: bool = True):
     add_base_options(parser)
     add_evaluation_options(parser)
     args = parse_and_load_from_model(parser)
-    
+
     if verbose:
         print_args(args)
     return args
