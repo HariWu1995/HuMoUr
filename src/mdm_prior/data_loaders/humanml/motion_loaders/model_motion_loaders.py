@@ -1,10 +1,15 @@
-from torch.utils.data import DataLoader, Dataset
-from data_loaders.humanml.utils.get_opt import get_opt
-from data_loaders.humanml.motion_loaders.comp_v6_model_dataset import CompMDMGeneratedDataset, CompMDMInpaintingGeneratedDataset, \
-    CompMDMUnfoldingGeneratedDataset
-from data_loaders.humanml.utils.word_vectorizer import WordVectorizer
 import numpy as np
+
+from torch.utils.data import DataLoader, Dataset
 from torch.utils.data._utils.collate import default_collate
+
+from src.mdm_prior.data_loaders.humanml.utils.get_opt import get_opt
+from src.mdm_prior.data_loaders.humanml.utils.word_vectorizer import WordVectorizer
+from src.mdm_prior.data_loaders.humanml.motion_loaders.comp_v6_model_dataset import (
+    CompMDMGeneratedDataset, 
+    CompMDMInpaintingGeneratedDataset, 
+    CompMDMUnfoldingGeneratedDataset,
+)
 
 
 def collate_fn(batch):
@@ -13,6 +18,7 @@ def collate_fn(batch):
 
 
 class MMGeneratedDataset(Dataset):
+
     def __init__(self, opt, motion_dataset, w_vectorizer):
         self.opt = opt
         self.dataset = motion_dataset.mm_generated_motion
@@ -36,6 +42,7 @@ class MMGeneratedDataset(Dataset):
             #                              ], axis=0)
             motion = motion[None, :]
             motions.append(motion)
+
         m_lens = np.array(m_lens, dtype=np.int)
         motions = np.concatenate(motions, axis=0)
         sort_indx = np.argsort(m_lens)[::-1].copy()
@@ -45,7 +52,6 @@ class MMGeneratedDataset(Dataset):
         m_lens = m_lens[sort_indx]
         motions = motions[sort_indx]
         return motions, m_lens
-
 
 
 def get_motion_loader(opt_path, batch_size, ground_truth_dataset, mm_num_samples, mm_num_repeats, device):
@@ -69,15 +75,14 @@ def get_motion_loader(opt_path, batch_size, ground_truth_dataset, mm_num_samples
     mm_motion_loader = DataLoader(mm_dataset, batch_size=1, num_workers=1)
 
     print('Generated Dataset Loading Completed!!!')
-
     return motion_loader, mm_motion_loader
+
 
 # our loader
 def get_mdm_loader(args, model, diffusion, batch_size, ground_truth_loader, mm_num_samples, mm_num_repeats, max_motion_length, num_samples_limit, scale, num_unfoldings=0):
-    opt = {
-        'name': 'test',  # FIXME
-    }
+    opt = {'name': 'test',}  # FIXME
     print('Generating %s ...' % opt['name'])
+
     # dataset = CompMDMGeneratedDataset(opt, ground_truth_dataset, ground_truth_dataset.w_vectorizer, mm_num_samples, mm_num_repeats)
     if hasattr(args, "inpainting_mask") and args.inpainting_mask != '':
         dataset = CompMDMInpaintingGeneratedDataset(args, model, diffusion, ground_truth_loader, mm_num_samples, mm_num_repeats, max_motion_length, num_samples_limit, scale)
@@ -93,5 +98,4 @@ def get_mdm_loader(args, model, diffusion, batch_size, ground_truth_loader, mm_n
     mm_motion_loader = DataLoader(mm_dataset, batch_size=1, num_workers=1)
 
     print('Generated Dataset Loading Completed!!!')
-
     return motion_loader, mm_motion_loader

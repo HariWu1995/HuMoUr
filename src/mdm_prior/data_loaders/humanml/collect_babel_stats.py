@@ -1,7 +1,10 @@
-from data_loaders.get_data import get_dataset_loader
-import numpy as np
-from tqdm import tqdm
 import os
+from tqdm import tqdm
+
+import numpy as np
+
+from src.mdm_prior.data_loaders.get_data import get_dataset_loader
+
 
 def run():
     # instance dataset
@@ -29,6 +32,7 @@ def run():
     os.makedirs(os.path.join(os.getcwd(), 'babel', 'motion1', 'meta'))
     np.save(os.path.join(os.getcwd(), 'babel', 'motion1', 'meta', 'mean.npy'), _mean)
     np.save(os.path.join(os.getcwd(), 'babel', 'motion1', 'meta', 'std.npy'), _std)
+
 
 if __name__ == '__main__':
     run()

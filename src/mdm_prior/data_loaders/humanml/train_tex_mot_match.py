@@ -1,21 +1,20 @@
 import os
-
 from os.path import join as pjoin
-import torch
-
-from data_loaders.amass.sampling import FrameSampler
-from data_loaders.amass.transforms import SMPLTransform
-from data_loaders.get_data import get_dataset_loader
-from data_loaders.humanml.options.train_options import TrainTexMotMatchOptions
-
-from data_loaders.humanml.networks.modules import *
-from data_loaders.humanml.networks.trainers import TextMotionMatchTrainer
-from data_loaders.humanml.data.dataset import Text2MotionDatasetV2, collate_fn, BABEL_Text2MotionDatasetV2
-from data_loaders.humanml.scripts.motion_process import *
-from torch.utils.data import DataLoader
-from data_loaders.humanml.utils.word_vectorizer import WordVectorizer, POS_enumerator
 from copy import deepcopy
-from  data_loaders.humanml import collect_babel_stats
+
+import torch
+from torch.utils.data import DataLoader
+
+from src.mdm_prior.data_loaders.get_data import get_dataset_loader
+from src.mdm_prior.data_loaders.amass.sampling import FrameSampler
+from src.mdm_prior.data_loaders.amass.transforms import SMPLTransform
+from src.mdm_prior.data_loaders.humanml import collect_babel_stats
+from src.mdm_prior.data_loaders.humanml.data.dataset import Text2MotionDatasetV2, collate_fn, BABEL_Text2MotionDatasetV2
+from src.mdm_prior.data_loaders.humanml.networks.modules import *
+from src.mdm_prior.data_loaders.humanml.networks.trainers import TextMotionMatchTrainer
+from src.mdm_prior.data_loaders.humanml.options.train_options import TrainTexMotMatchOptions
+from src.mdm_prior.data_loaders.humanml.scripts.motion_process import *
+from src.mdm_prior.data_loaders.humanml.utils.word_vectorizer import WordVectorizer, POS_enumerator
 
 
 def build_models(opt):
@@ -29,14 +28,17 @@ def build_models(opt):
                                       hidden_size=opt.dim_motion_hidden,
                                       output_size=opt.dim_coemb_hidden,
                                       device=opt.device)
+
     if not opt.is_continue and not opt.movement_from_scratch:
        checkpoint = torch.load(pjoin(opt.checkpoints_dir, opt.dataset_name, opt.decomp_name, 'model', 'latest.tar'),
                                map_location=opt.device)
        movement_enc.load_state_dict(checkpoint['movement_enc'])
+       
     return text_enc, motion_enc, movement_enc
 
 
 if __name__ == '__main__':
+
     parser = TrainTexMotMatchOptions()
     opt = parser.parse()
 
@@ -65,6 +67,7 @@ if __name__ == '__main__':
         opt.dim_pose = 263
         num_classes = 200 // opt.unit_length
         meta_root = pjoin(opt.checkpoints_dir, opt.dataset_name, 'Comp_v6_KLD01', 'meta')
+
     elif opt.dataset_name == 'kit':
         opt.data_root = './dataset/KIT-ML'
         opt.motion_dir = pjoin(opt.data_root, 'new_joint_vecs')
@@ -76,6 +79,7 @@ if __name__ == '__main__':
         opt.max_motion_length = 196
         num_classes = 200 // opt.unit_length
         meta_root = pjoin(opt.checkpoints_dir, opt.dataset_name, 'Comp_v6_KLD005', 'meta')
+
     elif opt.dataset_name == 'babel':
         opt.foot_contact_entries = 0
         opt.dim_pose = 135
@@ -86,6 +90,7 @@ if __name__ == '__main__':
         # meta_root = pjoin(opt.checkpoints_dir, opt.dataset_name, 'motion1', 'meta')
         # if not os.path.exists(meta_root):
         #     collect_babel_stats.run()
+
     else:
         raise KeyError('Dataset Does Not Exist')
 
@@ -93,17 +98,17 @@ if __name__ == '__main__':
     dim_word = 300
     dim_pos_ohot = len(POS_enumerator)
 
-
     text_encoder, motion_encoder, movement_encoder = build_models(opt)
 
     pc_text_enc = sum(param.numel() for param in text_encoder.parameters())
     print(text_encoder)
     print("Total parameters of text encoder: {}M".format(pc_text_enc//1e6))
+
     pc_motion_enc = sum(param.numel() for param in motion_encoder.parameters())
     print(motion_encoder)
     print("Total parameters of motion encoder: {}M".format(pc_motion_enc//1e6))
-    print("Total parameters: {}M".format((pc_motion_enc + pc_text_enc)//1e6))
 
+    print("Total parameters: {}M".format((pc_motion_enc + pc_text_enc)//1e6))
 
     trainer = TextMotionMatchTrainer(opt, text_encoder, motion_encoder, movement_encoder)
 
@@ -114,26 +119,32 @@ if __name__ == '__main__':
         val_loader = get_dataset_loader('babel',
                                         batch_size=opt.batch_size, num_frames=480,  # not in use
                                         split='val', load_mode='evaluator_train', opt=opt)
-
     else:
         w_vectorizer = WordVectorizer('./glove', 'our_vab')
         mean = np.load(pjoin(meta_root, 'mean.npy'))
         std = np.load(pjoin(meta_root, 'std.npy'))
+
         dataset_args = {
             'opt': opt, 'mean': mean, 'std': std, 'w_vectorizer': w_vectorizer
         }
+
         train_split_file = pjoin(opt.data_root, 'train.txt')
         val_split_file = pjoin(opt.data_root, 'val.txt')
-        val_args, train_args = deepcopy(dataset_args), deepcopy(dataset_args)
+
+        val_args = deepcopy(dataset_args)
+        train_args = deepcopy(dataset_args)
+
         train_args.update({'split_file': train_split_file})
         val_args.update({'split_file': val_split_file})
 
         train_dataset = Text2MotionDatasetV2(**train_args)
         val_dataset = Text2MotionDatasetV2(**val_args)
+
         train_loader = DataLoader(train_dataset, batch_size=opt.batch_size, drop_last=True, num_workers=4,
                                   shuffle=True, collate_fn=collate_fn, pin_memory=True)
         val_loader = DataLoader(val_dataset, batch_size=opt.batch_size, drop_last=True, num_workers=4,
                                 shuffle=True, collate_fn=collate_fn, pin_memory=True)  # FIXME
+
         # val_loader = DataLoader(train_dataset, batch_size=opt.batch_size, drop_last=True, num_workers=4,
         #                         shuffle=True, collate_fn=collate_fn, pin_memory=True)
 

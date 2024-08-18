@@ -1,23 +1,29 @@
 import os
+import math
+import time
+
 import numpy as np
 # import cv2
 from PIL import Image
-from data_loaders.humanml.utils import paramUtil
-import math
-import time
 import matplotlib.pyplot as plt
 from scipy.ndimage import gaussian_filter
+
+from src.mdm_prior.data_loaders.humanml.utils import paramUtil
+
+
+COLORS = [
+    [255, 0, 0], [255, 85, 0], [255, 170, 0], [255, 255, 0], [170, 255, 0], [85, 255, 0], 
+    [0, 255, 0], [0, 255, 85], [0, 255, 170], [0, 255, 255], [0, 170, 255], [0, 85, 255], 
+    [0, 0, 255], [85, 0, 255], [170, 0, 255], [255, 0, 255], [255, 0, 170], [255, 0, 85],
+]
+
+MISSING_VALUE = -1
 
 
 def mkdir(path):
     if not os.path.exists(path):
         os.makedirs(path)
 
-COLORS = [[255, 0, 0], [255, 85, 0], [255, 170, 0], [255, 255, 0], [170, 255, 0], [85, 255, 0], [0, 255, 0],
-          [0, 255, 85], [0, 255, 170], [0, 255, 255], [0, 170, 255], [0, 85, 255], [0, 0, 255], [85, 0, 255],
-          [170, 0, 255], [255, 0, 255], [255, 0, 170], [255, 0, 85]]
-
-MISSING_VALUE = -1
 
 def save_image(image_numpy, image_path):
     img_pil = Image.fromarray(image_numpy)
@@ -60,6 +66,7 @@ def print_current_loss(start_time, niter_state, losses, epoch=None, sub_epoch=No
         message += ' %s: %.4f ' % (k, v)
     message += ' sl_length:%2d tf_ratio:%.2f'%(sl_steps, tf_ratio)
     print(message)
+
 
 def print_current_loss_decomp(start_time, niter_state, total_niters, losses, epoch=None, inner_iter=None):
 
@@ -114,6 +121,7 @@ def compose_and_save_img(img_list, save_dir, img_name, col=4, row=1, img_size=(2
     compose_img = compose_image(img_list, col, row, img_size)
     if not os.path.exists(save_dir):
         os.makedirs(save_dir)
+
     img_path = os.path.join(save_dir, img_name)
     # print(img_path)
     compose_img.save(img_path)
@@ -124,20 +132,19 @@ def compose_image(img_list, col, row, img_size):
     for y in range(0, row):
         for x in range(0, col):
             from_img = Image.fromarray(img_list[y * col + x])
-            # print((x * img_size[0], y*img_size[1],
-            #                           (x + 1) * img_size[0], (y + 1) * img_size[1]))
-            paste_area = (x * img_size[0], y*img_size[1],
-                                      (x + 1) * img_size[0], (y + 1) * img_size[1])
+            paste_area = (x      * img_size[0],  y      * img_size[1],
+                         (x + 1) * img_size[0], (y + 1) * img_size[1])
             to_image.paste(from_img, paste_area)
-            # to_image[y*img_size[1]:(y + 1) * img_size[1], x * img_size[0] :(x + 1) * img_size[0]] = from_img
     return to_image
 
 
 def plot_loss_curve(losses, save_path, intervals=500):
     plt.figure(figsize=(10, 5))
     plt.title("Loss During Training")
+
     for key in losses.keys():
         plt.plot(list_cut_average(losses[key], intervals), label=key)
+
     plt.xlabel("Iterations/" + str(intervals))
     plt.ylabel("Loss")
     plt.legend()
@@ -161,7 +168,7 @@ def list_cut_average(ll, intervals):
 
 def motion_temporal_filter(motion, sigma=1):
     motion = motion.reshape(motion.shape[0], -1)
-    # print(motion.shape) 
+    # print(motion.shape)
     for i in range(motion.shape[1]):
         motion[:, i] = gaussian_filter(motion[:, i], sigma=sigma, mode="nearest")
     return motion.reshape(motion.shape[0], -1, 3)

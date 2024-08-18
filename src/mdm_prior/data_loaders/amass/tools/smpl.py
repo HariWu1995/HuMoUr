@@ -17,9 +17,11 @@
 from typing import Optional
 import torch
 from torch import Tensor
-from data_loaders.amass.tools_teach import geometry
-from data_loaders.amass.tools_teach.easyconvert import axis_angle_to
-from data_loaders.amass.transforms.smpl import RotTransDatastruct
+
+from src.mdm_prior.data_loaders.amass.tools_teach import geometry
+from src.mdm_prior.data_loaders.amass.transforms.smpl import RotTransDatastruct
+from src.mdm_prior.data_loaders.amass.tools_teach.easyconvert import axis_angle_to
+
 
 def canonicalize_smplh(poses: Tensor, trans: Optional[Tensor] = None):
     bs, nframes, njoints = poses.shape[:3]

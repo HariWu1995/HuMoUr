@@ -33,11 +33,12 @@ def collate_tensor_with_padding(batch: List[Tensor]) -> Tensor:
 
 def collate_pairs_and_text(lst_elements: List, ) -> Dict:
     if 'features' in lst_elements[0]: # test set
-        batch = {"motion_feats": collate_tensor_with_padding([el["features"] for el in lst_elements]),
-                "length": [x["length"] for x in lst_elements],
-                "text": [x["text"] for x in lst_elements],
-                "is_transition": collate_tensor_with_padding([el["is_transition"] for el in lst_elements])
-                }
+        batch = {
+            "length": [x["length"] for x in lst_elements],
+              "text": [x["text"] for x in lst_elements],
+             "motion_feats": collate_tensor_with_padding([el["features"]      for el in lst_elements]),
+            "is_transition": collate_tensor_with_padding([el["is_transition"] for el in lst_elements]),
+        }
     else:
         raise ValueError("Should always have features in lst_elements")
     return batch

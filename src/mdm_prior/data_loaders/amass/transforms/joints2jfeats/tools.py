@@ -27,15 +27,13 @@ import torch.nn.functional as F
 # LH, RH = smplh_joints.index("left_hip"), smplh_joints.index("right_hip")
 
 # Get the indexes of particular body part
-# Feet
-from data_loaders.amass.info.joints import mmm_joints
+from src.mdm_prior.data_loaders.amass.info.joints import mmm_joints
 
 LM, RM = mmm_joints.index("LMrot"), mmm_joints.index("RMrot")
-LF, RF = mmm_joints.index("LF"), mmm_joints.index("RF")
-# Shoulders
-LS, RS = mmm_joints.index("LS"), mmm_joints.index("RS")
-# Hips
-LH, RH = mmm_joints.index("LH"), mmm_joints.index("RH")
+LF, RF = mmm_joints.index("LF"), mmm_joints.index("RF") # Feet
+LS, RS = mmm_joints.index("LS"), mmm_joints.index("RS") # Shoulders
+LH, RH = mmm_joints.index("LH"), mmm_joints.index("RH") # Hips
+
 
 def get_forward_direction(poses, jointstype="mmm"):
     assert jointstype == 'mmm'
@@ -65,9 +63,9 @@ def softmin(x, softness=1.0, dim=0):
 
 def gaussian_filter1d(_inputs, sigma, truncate=4.0):
     # Code adapted/mixed from scipy library into pytorch
-    # https://github.com/scipy/scipy/blob/47bb6febaa10658c72962b9615d5d5aa2513fa3a/scipy/ndimage/filters.py#L211
+    #   https://github.com/scipy/scipy/blob/47bb6febaa10658c72962b9615d5d5aa2513fa3a/scipy/ndimage/filters.py#L211
     # and gaussian kernel
-    # https://github.com/scipy/scipy/blob/47bb6febaa10658c72962b9615d5d5aa2513fa3a/scipy/ndimage/filters.py#L179
+    #   https://github.com/scipy/scipy/blob/47bb6febaa10658c72962b9615d5d5aa2513fa3a/scipy/ndimage/filters.py#L179
     # Correspond to mode="nearest" and order = 0
     # But works batched
     if len(_inputs.shape) == 2:

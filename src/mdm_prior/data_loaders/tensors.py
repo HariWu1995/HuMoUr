@@ -1,6 +1,8 @@
 import random
 import torch
-from data_loaders.amass.tools import collate_tensor_with_padding
+
+from src.mdm_prior.data_loaders.amass.tools import collate_tensor_with_padding
+
 
 def lengths_to_mask(lengths, max_len):
     # max_len = max(lengths)
@@ -28,7 +30,6 @@ def collate(batch):
         lenbatch = [b['lengths'] for b in notnone_batches]
     else:
         lenbatch = [len(b['inp'][0][0]) for b in notnone_batches]
-
 
     databatchTensor = collate_tensors(databatch)
     lenbatchTensor = torch.as_tensor(lenbatch)
@@ -81,6 +82,7 @@ def collate(batch):
 
     return motion, cond
 
+
 # an adapter to our collate func
 def t2m_collate(batch):
     # batch.sort(key=lambda x: x[3], reverse=True)
@@ -93,6 +95,7 @@ def t2m_collate(batch):
     } for b in batch]
     return collate(adapted_batch)
 
+
 def babel_eval_collate(batch):
     try:
         adapted_batch = [{
@@ -102,50 +105,61 @@ def babel_eval_collate(batch):
             'lengths': b[5],
             'is_transition': torch.from_numpy(b[7]),
         } for b in batch]
+
     except TypeError:
-        print(5)
+        print('babel_eval_collate')
+
     return collate(adapted_batch)
+
 
 def pw3d_collate(batch):
     # batch.sort(key=lambda x: x[3], reverse=True)
     adapted_batch = [{
         'other_motion': torch.tensor(b[0].T).float().unsqueeze(1),
-        'inp': torch.tensor(b[4].T).float().unsqueeze(1), # [seqlen, J] -> [J, 1, seqlen]
-        'text': b[2], #b[0]['caption']
-        'person_id': b[3],
-        'tokens': b[6],
-        'lengths': b[5],
+                 'inp': torch.tensor(b[4].T).float().unsqueeze(1), # [seqlen, J] -> [J, 1, seqlen]
+                'text': b[2], # b[0]['caption']
+            'person_id': b[3],
+                'tokens': b[6],
+                'lengths': b[5],
     } for b in batch]
     return collate(adapted_batch)
+
 
 from enum import IntEnum
 
 class motion_type(IntEnum):
+
     MOTION_0 = 0
     MOTION_1 = 1
     MOTION_0_W_T = 2
     MOTION_1_W_T = 3
 
+
 def pad_sample_with_zeros(sample, vector_len):
     # pad inp, change lenghts, and pad is transition
     n_feats, _, seq_len = sample['inp'].shape
-    len_to_pad = vector_len-seq_len
+    len_to_pad = vector_len - seq_len
     torch.zeros_like(sample['inp'])
     is_transition_padding = torch.zeros(len_to_pad)
     inp_padding = torch.zeros((n_feats, 1, len_to_pad))
+
     sample['inp'] = torch.cat((sample['inp'], inp_padding), dim=2)
     sample['is_transition'] = torch.cat((sample['is_transition'], is_transition_padding))
     return sample
 
+
 def babel_collate(batch):
-    from data_loaders.amass.tools import collate_pairs_and_text
+    from src.mdm_prior.data_loaders.amass.tools import collate_pairs_and_text
+
     batch = collate_pairs_and_text(batch)
     bs = len(batch['motion_feats'])
     adapted_batch = []
     for ii in range(bs):
         adapted_batch.append({
-            'inp': batch['motion_feats'][ii].permute(1, 0).unsqueeze(1), # [seqlen, J] -> [J, 1, seqlen]
-            'text': batch['text'][ii],
-            'lengths': batch['length'][ii],
-            'is_transition': batch['is_transition'][ii]})
+                'inp': batch['motion_feats'][ii].permute(1, 0).unsqueeze(1), # [seqlen, J] -> [J, 1, seqlen]
+                'text': batch['text'][ii],
+                'lengths': batch['length'][ii],
+            'is_transition': batch['is_transition'][ii],
+        })
+
     return collate(adapted_batch)

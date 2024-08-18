@@ -20,7 +20,9 @@ import torch
 from torch import Tensor, nn
 from pathlib import Path
 
+
 class Rots2Joints(nn.Module):
+
     def __init__(self, path: Optional[str] = None,
                  normalization: bool = False,
                  eps: float = 1e-12,
@@ -31,6 +33,7 @@ class Rots2Joints(nn.Module):
         super().__init__()
         self.normalization = normalization
         self.eps = eps
+        
         # workaround for cluster local/sync
         if normalization:
             mean_path = Path(path) / "mean.pt"

@@ -18,6 +18,7 @@ from dataclasses import dataclass, fields
 
 
 class Transform:
+
     def collate(self, lst_datastruct):
         # from teach.data.tools import collate_tensor_with_padding
         example = lst_datastruct[0]
@@ -39,6 +40,7 @@ class Transform:
 # need to define "datakeys" and transforms
 @dataclass
 class Datastruct:
+
     def __getitem__(self, key):
         return getattr(self, key)
 
@@ -79,6 +81,8 @@ class Datastruct:
                 return tensor.detach()
             return None
 
-        kwargs = {key: detach_or_none(self[key])
-                  for key in self.datakeys}
+        kwargs = {
+                key: detach_or_none(self[key])
+            for key in self.datakeys
+        }
         return self.transforms.Datastruct(**kwargs)

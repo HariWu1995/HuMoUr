@@ -7,12 +7,14 @@ import torch
 import re
 
 from utils import dist_util
-from model.cfg_sampler import ClassifierFreeSampleModel
-from data_loaders.get_data import get_dataset_loader
-from eval.a2m.tools import save_metrics
-from utils.parser_util import evaluation_parser
-from utils.fixseed import fixseed
-from utils.model_util import create_model_and_diffusion, load_model_wo_clip
+from utils.seeding import fix_seed
+
+from src.mdm_prior.eval.a2m.tools import save_metrics
+from src.mdm_prior.model.cfg_sampler import ClassifierFreeSampleModel
+from src.mdm_prior.data_loaders.get_data import get_dataset_loader
+
+from src.mdm_prior.utils.parser_util import evaluation_parser
+from src.mdm_prior.utils.model_util import create_model_and_diffusion, load_model_wo_clip
 
 
 def evaluate(args, model, diffusion, data):
@@ -22,17 +24,20 @@ def evaluate(args, model, diffusion, data):
         scale = {
             'action': torch.ones(args.batch_size) * args.guidance_param,
         }
+
     model.to(dist_util.dev())
     model.eval()  # disable random masking
 
-
     folder, ckpt_name = os.path.split(args.model_path)
+
     if args.dataset == "humanact12":
         from eval.a2m.gru_eval import evaluate
         eval_results = evaluate(args, model, diffusion, data)
+
     elif args.dataset == "uestc":
         from eval.a2m.stgcn_eval import evaluate
         eval_results = evaluate(args, model, diffusion, data)
+
     else:
         raise NotImplementedError("This dataset is not supported.")
 
@@ -40,6 +45,7 @@ def evaluate(args, model, diffusion, data):
     iter = int(re.findall('\d+', ckpt_name)[0])
     scale = 1 if scale is None else scale['action'][0].item()
     scale = str(scale).replace('.', 'p')
+
     metricname = "evaluation_results_iter{}_samp{}_scale{}_a2m.yaml".format(iter, args.num_samples, scale)
     evalpath = os.path.join(folder, metricname)
     print(f"Saving evaluation: {evalpath}")
@@ -50,7 +56,7 @@ def evaluate(args, model, diffusion, data):
 
 def main():
     args = evaluation_parser()
-    fixseed(args.seed)
+    fix_seed(args.seed)
     dist_util.setup_dist(args.device)
 
     print(f'Eval mode [{args.eval_mode}]')
@@ -62,7 +68,6 @@ def main():
         args.num_samples = 1000
         args.num_seeds = 20
     args.cond_mode = 'action' # temporary code till 'unconstrained' is implemented
-
 
     data_loader = get_dataset_loader(name=args.dataset, num_frames=60, batch_size=args.batch_size,)
 
@@ -77,6 +82,7 @@ def main():
 
     fid_to_print = {k : sum([float(vv) for vv in v])/len(v) for k, v in eval_results['feats'].items() if 'fid' in k and 'gen' in k}
     print(fid_to_print)
+
 
 if __name__ == '__main__':
     main()

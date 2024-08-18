@@ -1,11 +1,12 @@
-import torch
-import torch.nn as nn
-import numpy as np
 import time
 import math
+import numpy as np
+
+import torch
+import torch.nn as nn
 from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
-# from networks.layers import *
 import torch.nn.functional as F
+# from networks.layers import *
 
 
 class ContrastiveLoss(torch.nn.Module):
@@ -77,6 +78,7 @@ class PositionalEncoding(nn.Module):
 
 
 class MovementConvEncoder(nn.Module):
+
     def __init__(self, input_size, hidden_size, output_size):
         super(MovementConvEncoder, self).__init__()
         self.main = nn.Sequential(
@@ -99,6 +101,7 @@ class MovementConvEncoder(nn.Module):
 
 
 class MovementConvDecoder(nn.Module):
+
     def __init__(self, input_size, hidden_size, output_size):
         super(MovementConvDecoder, self).__init__()
         self.main = nn.Sequential(
@@ -121,6 +124,7 @@ class MovementConvDecoder(nn.Module):
 
 
 class TextVAEDecoder(nn.Module):
+
     def __init__(self, text_size, input_size, output_size, hidden_size, n_layers):
         super(TextVAEDecoder, self).__init__()
         self.input_size = input_size
@@ -185,6 +189,7 @@ class TextVAEDecoder(nn.Module):
 
 
 class TextDecoder(nn.Module):
+
     def __init__(self, text_size, input_size, output_size, hidden_size, n_layers):
         super(TextDecoder, self).__init__()
         self.input_size = input_size
@@ -229,7 +234,9 @@ class TextDecoder(nn.Module):
         z = reparameterize(mu, logvar)
         return z, mu, logvar, hidden
 
+
 class AttLayer(nn.Module):
+
     def __init__(self, query_dim, key_dim, value_dim):
         super(AttLayer, self).__init__()
         self.W_q = nn.Linear(query_dim, value_dim)
@@ -265,6 +272,7 @@ class AttLayer(nn.Module):
 
 
 class TextEncoderBiGRU(nn.Module):
+
     def __init__(self, word_size, pos_size, hidden_size, device):
         super(TextEncoderBiGRU, self).__init__()
         self.device = device
@@ -294,9 +302,9 @@ class TextEncoderBiGRU(nn.Module):
         emb = pack_padded_sequence(input_embs, cap_lens, batch_first=True)
 
         gru_seq, gru_last = self.gru(emb, hidden)
-
         gru_last = torch.cat([gru_last[0], gru_last[1]], dim=-1)
         gru_seq = pad_packed_sequence(gru_seq, batch_first=True)[0]
+
         forward_seq = gru_seq[..., :self.hidden_size]
         backward_seq = gru_seq[..., self.hidden_size:].clone()
 
@@ -309,6 +317,7 @@ class TextEncoderBiGRU(nn.Module):
 
 
 class TextEncoderBiGRUCo(nn.Module):
+
     def __init__(self, word_size, pos_size, hidden_size, output_size, device):
         super(TextEncoderBiGRUCo, self).__init__()
         self.device = device
@@ -331,8 +340,8 @@ class TextEncoderBiGRUCo(nn.Module):
         self.hidden_size = hidden_size
         self.hidden = nn.Parameter(torch.randn((2, 1, self.hidden_size), requires_grad=True))
 
-    # input(batch_size, seq_len, dim)
     def forward(self, word_embs, pos_onehot, cap_lens):
+        # input(batch_size, seq_len, dim)
         num_samples = word_embs.shape[0]
 
         pos_embs = self.pos_emb(pos_onehot)
@@ -344,13 +353,13 @@ class TextEncoderBiGRUCo(nn.Module):
         emb = pack_padded_sequence(input_embs, cap_lens, batch_first=True)
 
         gru_seq, gru_last = self.gru(emb, hidden)
-
         gru_last = torch.cat([gru_last[0], gru_last[1]], dim=-1)
 
         return self.output_net(gru_last)
 
 
 class MotionEncoderBiGRUCo(nn.Module):
+
     def __init__(self, input_size, hidden_size, output_size, device):
         super(MotionEncoderBiGRUCo, self).__init__()
         self.device = device
@@ -369,8 +378,8 @@ class MotionEncoderBiGRUCo(nn.Module):
         self.hidden_size = hidden_size
         self.hidden = nn.Parameter(torch.randn((2, 1, self.hidden_size), requires_grad=True))
 
-    # input(batch_size, seq_len, dim)
     def forward(self, inputs, m_lens):
+        # input(batch_size, seq_len, dim)
         num_samples = inputs.shape[0]
 
         input_embs = self.input_emb(inputs)
@@ -380,13 +389,13 @@ class MotionEncoderBiGRUCo(nn.Module):
         emb = pack_padded_sequence(input_embs, cap_lens, batch_first=True)
 
         gru_seq, gru_last = self.gru(emb, hidden)
-
         gru_last = torch.cat([gru_last[0], gru_last[1]], dim=-1)
 
         return self.output_net(gru_last)
 
 
 class MotionLenEstimatorBiGRU(nn.Module):
+
     def __init__(self, word_size, pos_size, hidden_size, output_size):
         super(MotionLenEstimatorBiGRU, self).__init__()
 
@@ -432,7 +441,6 @@ class MotionLenEstimatorBiGRU(nn.Module):
         emb = pack_padded_sequence(input_embs, cap_lens, batch_first=True)
 
         gru_seq, gru_last = self.gru(emb, hidden)
-
         gru_last = torch.cat([gru_last[0], gru_last[1]], dim=-1)
 
         return self.output(gru_last)

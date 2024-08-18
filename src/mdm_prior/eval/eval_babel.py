@@ -1,35 +1,43 @@
-from model.DoubleTake_MDM import doubleTake_MDM
-from model.mdm import MDM
-from utils.parser_util import evaluation_double_take_parser
-from utils.fixseed import fixseed
+from copy import deepcopy
 from datetime import datetime
-from data_loaders.humanml.motion_loaders.model_motion_loaders import get_mdm_loader  # get_motion_loader
-from data_loaders.humanml.utils.metrics import *
-from data_loaders.humanml.networks.evaluator_wrapper import EvaluatorMDMWrapper
 from collections import OrderedDict
-from data_loaders.humanml.scripts.motion_process import *
-from data_loaders.humanml.utils.utils import *
-from utils.model_util import load_model
 
 from diffusion import logger
+
 from utils import dist_util
-from data_loaders.get_data import get_dataset_loader
-from model.cfg_sampler import ClassifierFreeSampleModel
-from copy import deepcopy
+from utils.seeding import fix_seed
+
+from src.mdm_prior.model.DoubleTake_MDM import doubleTake_MDM
+from src.mdm_prior.model.mdm import MDM
+from src.mdm_prior.model.cfg_sampler import ClassifierFreeSampleModel
+
+from src.mdm_prior.utils.parser_util import evaluation_double_take_parser
+from src.mdm_prior.utils.model_util import load_model
+
+from src.mdm_prior.data_loaders.get_data import get_dataset_loader
+from src.mdm_prior.data_loaders.humanml.utils.utils import *
+from src.mdm_prior.data_loaders.humanml.utils.metrics import *
+from src.mdm_prior.data_loaders.humanml.scripts.motion_process import *
+from src.mdm_prior.data_loaders.humanml.networks.evaluator_wrapper import EvaluatorMDMWrapper
+from src.mdm_prior.data_loaders.humanml.motion_loaders.model_motion_loaders import get_mdm_loader  # get_motion_loader
+
 
 torch.multiprocessing.set_sharing_strategy('file_system')
+
 
 def evaluate_matching_score(eval_wrapper, motion_loaders, file):
     match_score_dict = OrderedDict({})
     R_precision_dict = OrderedDict({})
     activation_dict = OrderedDict({})
     print('========== Evaluating Matching Score ==========')
+
     for motion_loader_name, motion_loader in motion_loaders.items():
         all_motion_embeddings = []
         score_list = []
         all_size = 0
         matching_score_sum = 0
         top_k_count = 0
+
         # print(motion_loader_name)
         with torch.no_grad():
             for idx, batch in enumerate(motion_loader):
@@ -50,7 +58,6 @@ def evaluate_matching_score(eval_wrapper, motion_loaders, file):
                 top_k_count += top_k_mat.sum(axis=0)
 
                 all_size += text_embeddings.shape[0]
-
                 all_motion_embeddings.append(motion_embeddings.cpu().numpy())
 
             all_motion_embeddings = np.concatenate(all_motion_embeddings, axis=0)
@@ -75,6 +82,7 @@ def evaluate_matching_score(eval_wrapper, motion_loaders, file):
 def evaluate_fid(eval_wrapper, groundtruth_loader, activation_dict, file):
     eval_dict = OrderedDict({})
     gt_motion_embeddings = []
+
     print('========== Evaluating FID ==========')
     with torch.no_grad():
         for idx, batch in enumerate(groundtruth_loader):
@@ -140,11 +148,13 @@ def get_metric_statistics(values, replication_times):
 
 def evaluation(eval_wrapper, gt_loader, eval_motion_loaders, log_file, replication_times, diversity_times, mm_num_times, run_mm=False):
     with open(log_file, 'w') as f:
-        all_metrics = OrderedDict({'Matching Score': OrderedDict({}),
-                                   'R_precision': OrderedDict({}),
-                                   'FID': OrderedDict({}),
-                                   'Diversity': OrderedDict({}),
-                                   'MultiModality': OrderedDict({})})
+        all_metrics = OrderedDict({
+            'Matching Score': OrderedDict({}),
+            'R_precision': OrderedDict({}),
+                  'FID': OrderedDict({}),
+            'Diversity': OrderedDict({}),
+            'MultiModality': OrderedDict({}),
+        })
         for replication in range(replication_times):
             motion_loaders = {}
             mm_motion_loaders = {}
@@ -218,41 +228,47 @@ def evaluation(eval_wrapper, gt_loader, eval_motion_loaders, log_file, replicati
                     else:
                         all_metrics['MultiModality'][key] += [item]
 
-
         # print(all_metrics['Diversity'])
         mean_dict = {}
         for metric_name, metric_dict in all_metrics.items():
             print('========== %s Summary ==========' % metric_name)
             print('========== %s Summary ==========' % metric_name, file=f, flush=True)
+            
             for model_name, values in metric_dict.items():
                 # print(metric_name, model_name)
                 mean, conf_interval = get_metric_statistics(np.array(values), replication_times)
                 mean_dict[metric_name + '_' + model_name] = mean
                 # print(mean, mean.dtype)
+                
                 if isinstance(mean, np.float64) or isinstance(mean, np.float32):
                     print(f'---> [{model_name}] Mean: {mean:.4f} CInterval: {conf_interval:.4f}')
                     print(f'---> [{model_name}] Mean: {mean:.4f} CInterval: {conf_interval:.4f}', file=f, flush=True)
+                
                 elif isinstance(mean, np.ndarray):
                     line = f'---> [{model_name}]'
                     for i in range(len(mean)):
                         line += '(top %d) Mean: %.4f CInt: %.4f;' % (i+1, mean[i], conf_interval[i])
                     print(line)
                     print(line, file=f, flush=True)
+
         return mean_dict
 
 
 if __name__ == '__main__':
     args = evaluation_double_take_parser()
-    fixseed(args.seed)
+    fix_seed(args.seed)
+    
     args.batch_size = 32 # This must be 32! Don't change it! otherwise it will cause a bug in R precision calc!
     name = os.path.basename(os.path.dirname(args.model_path))
     niter = os.path.basename(args.model_path).replace('model', '').replace('.pt', '')
     log_file = os.path.join(os.path.dirname(args.model_path), 'eval_babel_{}_{}'.format(name, niter))
+    
     if args.guidance_param != 1.:
         log_file += f'_gscale{args.guidance_param}'
     log_file += f'_{args.eval_on}'
     log_file += f'_{args.eval_mode}'
     log_file += f'_handshake_{args.handshake_size}'
+    
     if args.double_take:
         log_file += f'_doubleTake_blend_{args.blend_len}'
         log_file += f'_skipSteps_{args.skip_steps_double_take}'
@@ -271,6 +287,7 @@ if __name__ == '__main__':
         mm_num_times = 0
         diversity_times = 30
         replication_times = 5  # about 3 Hrs
+
     elif args.eval_mode == 'wo_mm':
         num_samples_limit = 1000 #1000
         run_mm = False
@@ -279,6 +296,7 @@ if __name__ == '__main__':
         mm_num_times = 0
         diversity_times = 300
         replication_times = 10 # about 12 Hrs
+
     elif args.eval_mode == 'mm_short':
         num_samples_limit = 1000
         run_mm = True
@@ -287,9 +305,9 @@ if __name__ == '__main__':
         mm_num_times = 10
         diversity_times = 300
         replication_times = 5  # about 15 Hrs
+
     else:
         raise ValueError()
-
 
     dist_util.setup_dist(args.device)
     logger.configure()
@@ -299,6 +317,7 @@ if __name__ == '__main__':
     # eval on transitions
     if args.eval_on == "transition":
         gt_loader = get_dataset_loader(name=args.dataset, batch_size=args.batch_size, num_frames=(args.handshake_size + args.transition_margins, args.handshake_size + args.transition_margins), split=split, load_mode='gt', short_db=args.short_db, cropping_sampler=args.cropping_sampler)
+    
     # eval on intervals
     elif args.eval_on == "motion":
         gt_loader = get_dataset_loader(name=args.dataset, batch_size=args.batch_size, num_frames=(args.min_seq_len, args.max_seq_len), split=split, load_mode='gt', short_db=args.short_db, cropping_sampler=args.cropping_sampler)
@@ -311,9 +330,9 @@ if __name__ == '__main__':
     model, diffusion = load_model(args, data, dist_util.dev(), ModelClass=ModelClass)
 
     eval_motion_loaders = {
-        ################
-        ## HumanML3D Dataset##
-        ################
+        #####################
+        # HumanML3D Dataset #
+        #####################
         'vald': lambda: get_mdm_loader( args,
             model, diffusion, args.batch_size,
             gen_loader, mm_num_samples, mm_num_repeats, gt_loader.dataset.opt.max_motion_length, num_samples_limit, args.guidance_param, args.num_unfoldings

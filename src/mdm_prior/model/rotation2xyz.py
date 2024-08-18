@@ -1,23 +1,29 @@
 # This code is based on https://github.com/Mathux/ACTOR.git
+import os
 import torch
-import utils.rotation_conversions as geometry
-from data_loaders.amass.transforms.rots2joints import SMPLH
 
-from model.smpl import SMPL, JOINTSTYPE_ROOT
+import utils.rotation_conversions as geometry
+
+from src.mdm_prior.data_loaders.amass.transforms.rots2joints import SMPLH
+from src.mdm_prior.model.smpl import SMPL, JOINTSTYPE_ROOT
+
+
 JOINTSTYPES = ["a2m", "a2mpl", "smpl", "vibe", "vertices"]
+SMPL_DATA_ROOT = os.environ.get('SMPL_DATA_ROOT', './body_models/smpl_models')
 
 
 class Rotation2xyz:
+
     def __init__(self, device, dataset='amass', batch_size=None):
         self.device = device
         self.dataset = dataset
         if dataset == 'babel':
-            self.smpl_model = SMPLH(path='./body_models/smpl_models/smplh',
-                                                  jointstype='smplnh',
-                                                  input_pose_rep='matrix',
-                                                  batch_size=batch_size,
-                                                  gender='male',
-                                                  name='SMPLH').eval().to(device)
+            self.smpl_model = SMPLH(path=f'{SMPL_DATA_ROOT}/smplh',
+                                    jointstype='smplnh',
+                                    input_pose_rep='matrix',
+                                    batch_size=batch_size,
+                                    gender='male',
+                                    name='SMPLH').eval().to(device)
 
         else:
             self.smpl_model = SMPL().eval().to(device)
@@ -75,6 +81,7 @@ class Rotation2xyz:
                                 dtype=rotations.dtype, device=rotations.device)
             betas[:, 1] = beta
             # import ipdb; ipdb.set_trace()
+            
         if self.dataset == 'babel':
             out = self.smpl_model(body_pose=rotations, global_orient=global_orient, betas=betas, input_pose_rep='rot6d')
         else:

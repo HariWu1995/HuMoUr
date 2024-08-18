@@ -1,15 +1,18 @@
-import itertools
-
-import torch
-from data_loaders.humanml.networks.modules import *
-from data_loaders.humanml.networks.trainers import CompTrainerV6
-from torch.utils.data import Dataset, DataLoader
 from os.path import join as pjoin
 from tqdm import tqdm
-from data_loaders.humanml_utils import get_inpainting_mask
+import itertools
+
+import  numpy as np
+import torch
+from torch.utils.data import Dataset, DataLoader
+
+from src.mdm_prior.data_loaders.humanml.networks.modules import *
+from src.mdm_prior.data_loaders.humanml.networks.trainers import CompTrainerV6
+from src.mdm_prior.data_loaders.humanml_utils import get_inpainting_mask
 
 from utils.sampling_utils import double_take_arb_len, unfold_sample_arb_len
 from utils import dist_util
+
 
 def build_models(opt):
     if opt.text_enc_mod == 'bigru':
@@ -27,7 +30,6 @@ def build_models(opt):
                             hidden_size=opt.dim_pri_hidden,
                             n_layers=opt.n_layers_pri)
 
-
     seq_decoder = TextVAEDecoder(text_size=text_size,
                                  input_size=opt.dim_att_vec + opt.dim_z + opt.dim_movement_latent,
                                  output_size=opt.dim_movement_latent,
@@ -40,7 +42,6 @@ def build_models(opt):
 
     movement_enc = MovementConvEncoder(opt.dim_pose - 4, opt.dim_movement_enc_hidden, opt.dim_movement_latent)
     movement_dec = MovementConvDecoder(opt.dim_movement_latent, opt.dim_movement_dec_hidden, opt.dim_pose)
-
     len_estimator = MotionLenEstimatorBiGRU(opt.dim_word, opt.dim_pos_ohot, 512, opt.num_classes)
 
     # latent_dis = LatentDis(input_size=opt.dim_z * 2)
@@ -52,16 +53,20 @@ def build_models(opt):
     # return text_encoder, text_decoder, att_layer, vae_pri, vae_dec, vae_pos, motion_dis, movement_dis, latent_dis
     return text_encoder, seq_prior, seq_decoder, att_layer, movement_enc, movement_dec, len_estimator
 
+
 class CompV6GeneratedDataset(Dataset):
 
     def __init__(self, opt, dataset, w_vectorizer, mm_num_samples, mm_num_repeats):
         assert mm_num_samples < len(dataset)
         print(opt.model_dir)
 
+        text_enc, seq_pri, seq_dec, \
+        att_layer, mov_enc, mov_dec, len_estimator = build_models(opt)
+        
         dataloader = DataLoader(dataset, batch_size=1, num_workers=1, shuffle=True)
-        text_enc, seq_pri, seq_dec, att_layer, mov_enc, mov_dec, len_estimator = build_models(opt)
         trainer = CompTrainerV6(opt, text_enc, seq_pri, seq_dec, att_layer, mov_dec, mov_enc=mov_enc)
         epoch, it, sub_ep, schedule_len = trainer.load(pjoin(opt.model_dir, opt.which_epoch + '.tar'))
+        
         generated_motion = []
         mm_generated_motions = []
         mm_idxs = np.random.choice(len(dataset), mm_num_samples, replace=False)
@@ -73,6 +78,7 @@ class CompV6GeneratedDataset(Dataset):
         trainer.eval_mode()
         trainer.to(opt.device)
         with torch.no_grad():
+
             for i, data in tqdm(enumerate(dataloader)):
                 word_emb, pos_ohot, caption, cap_lens, motions, m_lens, tokens = data
                 tokens = tokens[0].split('_')
@@ -100,11 +106,13 @@ class CompV6GeneratedDataset(Dataset):
                     if t == 0:
                         # print(m_lens)
                         # print(text_data)
-                        sub_dict = {'motion': pred_motions[0].cpu().numpy(),
-                                    'length': m_lens[0].item(),
-                                    'cap_len': cap_lens[0].item(),
-                                    'caption': caption[0],
-                                    'tokens': tokens}
+                        sub_dict = {
+                            'motion': pred_motions[0].cpu().numpy(),
+                            'length': m_lens[0].item(),
+                            'cap_len': cap_lens[0].item(),
+                            'caption': caption[0],
+                            'tokens': tokens,
+                        }
                         generated_motion.append(sub_dict)
 
                     if is_mm:
@@ -112,25 +120,29 @@ class CompV6GeneratedDataset(Dataset):
                             'motion': pred_motions[0].cpu().numpy(),
                             'length': m_lens[0].item()
                         })
+
                 if is_mm:
-                    mm_generated_motions.append({'caption': caption[0],
-                                                 'tokens': tokens,
-                                                 'cap_len': cap_lens[0].item(),
-                                                 'mm_motions': mm_motions})
+                    mm_generated_motions.append({
+                        'caption': caption[0],
+                        'tokens': tokens,
+                        'cap_len': cap_lens[0].item(),
+                        'mm_motions': mm_motions,
+                    })
 
         self.generated_motion = generated_motion
         self.mm_generated_motion = mm_generated_motions
         self.opt = opt
         self.w_vectorizer = w_vectorizer
 
-
     def __len__(self):
         return len(self.generated_motion)
 
-
     def __getitem__(self, item):
         data = self.generated_motion[item]
-        motion, m_length, caption, tokens = data['motion'], data['length'], data['caption'], data['tokens']
+        motion = data['motion']
+        m_length = data['length']
+        caption = data['caption']
+        tokens = data['tokens']
         sent_len = data['cap_len']
 
         pos_one_hots = []
@@ -139,14 +151,17 @@ class CompV6GeneratedDataset(Dataset):
             word_emb, pos_oh = self.w_vectorizer[token]
             pos_one_hots.append(pos_oh[None, :])
             word_embeddings.append(word_emb[None, :])
+
         pos_one_hots = np.concatenate(pos_one_hots, axis=0)
         word_embeddings = np.concatenate(word_embeddings, axis=0)
 
         if m_length < self.opt.max_motion_length:
             motion = np.concatenate([motion,
-                                     np.zeros((self.opt.max_motion_length - m_length, motion.shape[1]))
-                                     ], axis=0)
+                                     np.zeros((self.opt.max_motion_length - m_length, motion.shape[1]))], 
+                                     axis=0)
+
         return word_embeddings, pos_one_hots, caption, sent_len, motion, m_length, '_'.join(tokens), []
+
 
 class CompMDMGeneratedDataset(Dataset):
 
@@ -157,9 +172,9 @@ class CompMDMGeneratedDataset(Dataset):
         use_ddim = False  # FIXME - hardcoded
         clip_denoised = False  # FIXME - hardcoded
         self.max_motion_length = max_motion_length
-        sample_fn = (
-            diffusion.p_sample_loop if not use_ddim else diffusion.ddim_sample_loop
-        )
+
+        sample_fn = diffusion.p_sample_loop if not use_ddim else \
+                    diffusion.ddim_sample_loop
 
         real_num_batches = len(dataloader)
         if num_samples_limit is not None:
@@ -176,8 +191,6 @@ class CompMDMGeneratedDataset(Dataset):
         print('mm_idxs', mm_idxs)
 
         model.eval()
-
-
         with torch.no_grad():
             for i, (motion, model_kwargs) in tqdm(enumerate(dataloader)):
 
@@ -212,44 +225,50 @@ class CompMDMGeneratedDataset(Dataset):
                     )
 
                     if t == 0:
-                        sub_dicts = [{'motion': sample[bs_i].squeeze().permute(1,0).cpu().numpy(),
-                                    'length': model_kwargs['y']['lengths'][bs_i].cpu().numpy(),
-                                    'caption': model_kwargs['y']['text'][bs_i],
-                                    'tokens': tokens[bs_i],
-                                    'cap_len': len(tokens[bs_i]),
-                                    'is_transition': model_kwargs['y']['is_transition'][bs_i]
-                                    } for bs_i in range(dataloader.batch_size)]
+                        sub_dicts = [{
+                            'motion': sample[bs_i].squeeze().permute(1,0).cpu().numpy(),
+                            'length': model_kwargs['y']['lengths'][bs_i].cpu().numpy(),
+                            'caption': model_kwargs['y']['text'][bs_i],
+                            'tokens': tokens[bs_i],
+                            'cap_len': len(tokens[bs_i]),
+                            'is_transition': model_kwargs['y']['is_transition'][bs_i],
+                        } for bs_i in range(dataloader.batch_size)]
+            
                         generated_motion += sub_dicts
 
                     if is_mm:
-                        mm_motions += [{'motion': sample[bs_i].squeeze().permute(1, 0).cpu().numpy(),
-                                        'length': model_kwargs['y']['lengths'][bs_i].cpu().numpy(),
-                                        } for bs_i in range(dataloader.batch_size)]
+                        mm_motions += [{
+                            'motion': sample[bs_i].squeeze().permute(1, 0).cpu().numpy(),
+                            'length': model_kwargs['y']['lengths'][bs_i].cpu().numpy(),
+                        } for bs_i in range(dataloader.batch_size)]
 
                 if is_mm:
                     mm_generated_motions += [{
-                                    'caption': model_kwargs['y']['text'][bs_i],
-                                    'tokens': tokens[bs_i],
-                                    'cap_len': len(tokens[bs_i]),
-                                    'mm_motions': mm_motions[bs_i::dataloader.batch_size],  # collect all 10 repeats from the (32*10) generated motions
-                                    } for bs_i in range(dataloader.batch_size)]
-
+                        'caption': model_kwargs['y']['text'][bs_i],
+                        'tokens': tokens[bs_i],
+                        'cap_len': len(tokens[bs_i]),
+                        'mm_motions': mm_motions[bs_i::dataloader.batch_size],  # collect all 10 repeats from the (32*10) generated motions
+                    } for bs_i in range(dataloader.batch_size)]
 
         self.generated_motion = generated_motion
         self.mm_generated_motion = mm_generated_motions
         self.w_vectorizer = dataloader.dataset.w_vectorizer
 
-
     def __len__(self):
         return len(self.generated_motion)
 
-
     def __getitem__(self, item):
         data = self.generated_motion[item]
-        motion, m_length, caption, tokens, transitions = data['motion'], data['length'], data['caption'], data['tokens'], data['is_transition']
+        motion = data['motion']
+        m_length = data['length']
+        caption = data['caption']
+        tokens = data['tokens']
+        transitions = data['is_transition']
         sent_len = data['cap_len']
 
-        if self.dataset.load_mode == 'eval' and self.dataset.dataset_name != 'babel':  # re-norm is not needed for babel dataset
+        if self.dataset.load_mode == 'eval' \
+        and self.dataset.dataset_name != 'babel':  
+            # re-norm is not needed for babel dataset
             normed_motion = motion
             denormed_motion = self.dataset.t2m_dataset.inv_transform(normed_motion)
             renormed_motion = (denormed_motion - self.dataset.mean_for_eval) / self.dataset.std_for_eval  # according to T2M norms
@@ -262,23 +281,26 @@ class CompMDMGeneratedDataset(Dataset):
             word_emb, pos_oh = self.w_vectorizer[token]
             pos_one_hots.append(pos_oh[None, :])
             word_embeddings.append(word_emb[None, :])
+
         pos_one_hots = np.concatenate(pos_one_hots, axis=0)
         word_embeddings = np.concatenate(word_embeddings, axis=0)
 
         # FIXME: I deleted the extra return value ([]), should check whether it breakes anything or not
         return word_embeddings, pos_one_hots, caption, sent_len, motion, m_length, '_'.join(tokens), []
 
+
 class CompMDMInpaintingGeneratedDataset(CompMDMGeneratedDataset):
+    
     def __init__(self, args, model, diffusion, dataloader, mm_num_samples, mm_num_repeats, max_motion_length, num_samples_limit, scale=1.):
         self.dataloader = dataloader
         self.dataset = dataloader.dataset
         assert mm_num_samples < len(dataloader.dataset)
+
         use_ddim = False  # FIXME - hardcoded
         clip_denoised = False  # FIXME - hardcoded
         self.max_motion_length = max_motion_length
-        sample_fn = (
-            diffusion.p_sample_loop if not use_ddim else diffusion.ddim_sample_loop
-        )
+        sample_fn = diffusion.p_sample_loop if not use_ddim else \
+                    diffusion.ddim_sample_loop
 
         real_num_batches = len(dataloader)
         if num_samples_limit is not None:
@@ -295,8 +317,6 @@ class CompMDMInpaintingGeneratedDataset(CompMDMGeneratedDataset):
         print('mm_idxs', mm_idxs)
 
         model.eval()
-
-
         with torch.no_grad():
             for i, (motion, model_kwargs) in tqdm(enumerate(dataloader)):
 
@@ -334,44 +354,45 @@ class CompMDMInpaintingGeneratedDataset(CompMDMGeneratedDataset):
                     )
 
                     if t == 0:
-                        sub_dicts = [{'motion': sample[bs_i].squeeze().permute(1,0).cpu().numpy(),
-                                    'length': model_kwargs['y']['lengths'][bs_i].cpu().numpy(),
-                                    'caption': model_kwargs['y']['text'][bs_i],
-                                    'tokens': tokens[bs_i],
-                                    'cap_len': len(tokens[bs_i]),
-                                    'is_transition': model_kwargs['y']['is_transition'][bs_i]
-                                    } for bs_i in range(dataloader.batch_size)]
+                        sub_dicts = [{
+                            'motion': sample[bs_i].squeeze().permute(1,0).cpu().numpy(),
+                            'length': model_kwargs['y']['lengths'][bs_i].cpu().numpy(),
+                            'caption': model_kwargs['y']['text'][bs_i],
+                            'tokens': tokens[bs_i],
+                            'cap_len': len(tokens[bs_i]),
+                            'is_transition': model_kwargs['y']['is_transition'][bs_i]
+                        } for bs_i in range(dataloader.batch_size)]
                         generated_motion += sub_dicts
 
                     if is_mm:
-                        mm_motions += [{'motion': sample[bs_i].squeeze().permute(1, 0).cpu().numpy(),
-                                        'length': model_kwargs['y']['lengths'][bs_i].cpu().numpy(),
-                                        } for bs_i in range(dataloader.batch_size)]
+                        mm_motions += [{
+                            'motion': sample[bs_i].squeeze().permute(1, 0).cpu().numpy(),
+                            'length': model_kwargs['y']['lengths'][bs_i].cpu().numpy(),
+                        } for bs_i in range(dataloader.batch_size)]
 
                 if is_mm:
                     mm_generated_motions += [{
-                                    'caption': model_kwargs['y']['text'][bs_i],
-                                    'tokens': tokens[bs_i],
-                                    'cap_len': len(tokens[bs_i]),
-                                    'mm_motions': mm_motions[bs_i::dataloader.batch_size],  # collect all 10 repeats from the (32*10) generated motions
-                                    } for bs_i in range(dataloader.batch_size)]
-
+                        'caption': model_kwargs['y']['text'][bs_i],
+                        'tokens': tokens[bs_i],
+                        'cap_len': len(tokens[bs_i]),
+                        'mm_motions': mm_motions[bs_i::dataloader.batch_size],  # collect all 10 repeats from the (32*10) generated motions
+                    } for bs_i in range(dataloader.batch_size)]
 
         self.generated_motion = generated_motion
         self.mm_generated_motion = mm_generated_motions
         self.w_vectorizer = dataloader.dataset.w_vectorizer
 
 
-
 class CompMDMUnfoldingGeneratedDataset2(Dataset):
+
     def __init__(self, args, model, diffusion, dataloader, mm_num_samples, mm_num_repeats, max_motion_length, num_samples_limit, scale=1., num_unfoldings=10):
         self.dataloader = dataloader
         self.dataset = dataloader.dataset
         assert mm_num_samples < len(dataloader.dataset)
+
         use_ddim = False  # FIXME - hardcoded
         clip_denoised = False  # FIXME - hardcoded
         self.max_motion_length = max_motion_length
-
         self.num_steps_to_generate = num_unfoldings
 
         # Will be changed later by the evaluation script for each copy of this dataset
@@ -392,10 +413,8 @@ class CompMDMUnfoldingGeneratedDataset2(Dataset):
             mm_idxs = []
         print('mm_idxs', mm_idxs)
 
-        model.eval()
-
         n_frames = 100  # FIXME - using fixed length
-
+        model.eval()
         with torch.no_grad():
             for i, (motion, model_kwargs) in tqdm(enumerate(dataloader)):
 
@@ -416,10 +435,10 @@ class CompMDMUnfoldingGeneratedDataset2(Dataset):
                     all_tokens = []
 
                     for bs_i in range(dataloader.batch_size):
-                        _tokens = [model_kwargs['y']['tokens'][bs_i - ii].split('_') for ii in
-                                   reversed(range(self.num_steps_to_generate))]
-                        texts = [model_kwargs['y']['text'][bs_i - ii] for ii in
-                                 reversed(range(self.num_steps_to_generate))]
+                        _tokens = [model_kwargs['y']['tokens'][bs_i - ii].split('_') 
+                                   for ii in reversed(range(self.num_steps_to_generate))]
+                        texts = [model_kwargs['y']['text'][bs_i - ii] 
+                                 for ii in reversed(range(self.num_steps_to_generate))]
                         lengths = [n_frames - args.handshake_size] * self.num_steps_to_generate
                         # lengths = [model_kwargs['y']['lengths'][bs_i - ii] for ii in
                         #            reversed(range(self.num_steps_to_generate))]
@@ -453,40 +472,42 @@ class CompMDMUnfoldingGeneratedDataset2(Dataset):
                     sample = [[all_samples[bs_i*self.num_steps_to_generate + step_i, :, :, args.handshake_size:].squeeze().permute(1,0).cpu().numpy() for step_i in range(self.num_steps_to_generate)] for bs_i in range(dataloader.batch_size)]
 
                     if t == 0:
-                        sub_dicts = [{'motion': sample[bs_i],
-                                    'length': all_lengths[bs_i],
-                                    'caption': all_texts[bs_i],
-                                    'tokens': all_tokens[bs_i],
-                                    'cap_len': [len(e) for e in all_tokens[bs_i]],
-                                    } for bs_i in range(dataloader.batch_size)]
+                        sub_dicts = [{
+                            'motion': sample[bs_i],
+                            'length': all_lengths[bs_i],
+                            'caption': all_texts[bs_i],
+                            'tokens': all_tokens[bs_i],
+                            'cap_len': [len(e) for e in all_tokens[bs_i]],
+                        } for bs_i in range(dataloader.batch_size)]
                         generated_motion += sub_dicts
 
                     if is_mm:
-                        mm_motions += [{'motion': sample[bs_i],
-                                        'length': all_lengths[bs_i],
-                                        } for bs_i in range(dataloader.batch_size)]
+                        mm_motions += [{
+                            'motion': sample[bs_i],
+                            'length': all_lengths[bs_i],
+                        } for bs_i in range(dataloader.batch_size)]
 
                 if is_mm:
                     mm_generated_motions += [{
-                                    'caption': all_texts[bs_i],
-                                    'tokens': all_tokens[bs_i],
-                                    'cap_len': [len(e) for e in all_tokens[bs_i]],
-                                    'mm_motions': mm_motions[bs_i::dataloader.batch_size],  # collect all 10 repeats from the (32*10) generated motions
-                                    } for bs_i in range(dataloader.batch_size)]
-
+                        'caption': all_texts[bs_i],
+                        'tokens': all_tokens[bs_i],
+                        'cap_len': [len(e) for e in all_tokens[bs_i]],
+                        'mm_motions': mm_motions[bs_i::dataloader.batch_size],  # collect all 10 repeats from the (32*10) generated motions
+                    } for bs_i in range(dataloader.batch_size)]
 
         self.generated_motion = generated_motion
         self.mm_generated_motion = mm_generated_motions
         self.w_vectorizer = dataloader.dataset.w_vectorizer
 
-
     def __len__(self):
         return len(self.generated_motion)
 
-
     def __getitem__(self, item):
         data = self.generated_motion[item]
-        motion, m_length, caption, tokens = data['motion'][self.step_to_eval], data['length'][self.step_to_eval], data['caption'][self.step_to_eval], data['tokens'][self.step_to_eval]
+        motion = data['motion'][self.step_to_eval]
+        m_length = data['length'][self.step_to_eval]
+        caption = data['caption'][self.step_to_eval]
+        tokens = data['tokens'][self.step_to_eval]
         sent_len = data['cap_len'][self.step_to_eval]
 
         if self.transition:
@@ -504,15 +525,16 @@ class CompMDMUnfoldingGeneratedDataset2(Dataset):
             # print(f'cur motion [{cur_motion_start}:{cur_motion_end}]')
 
             motion = np.concatenate([prev_motion[prev_motion_start:prev_motion_end],
-                                     cur_motion[cur_motion_start:cur_motion_end]], axis=0)
+                                      cur_motion[ cur_motion_start: cur_motion_end]], axis=0)
             m_length = motion.shape[0]
             # print(f'transition length [{motion.shape[0]}], max is [{max_tran_length}]')
             pad = np.zeros((self.max_motion_length - motion.shape[0], prev_motion.shape[1]), dtype=prev_motion.dtype)
             motion = np.concatenate([motion, pad], axis=0)
             assert motion.shape[0] == self.max_motion_length, f'motion.shape[0]={motion.shape[0]}'
 
-
-        if self.dataset.load_mode == 'eval' and self.dataset.dataset_name != 'babel':  # re-norm is not needed for babel dataset
+        if self.dataset.load_mode == 'eval' \
+        and self.dataset.dataset_name != 'babel':  
+            # re-norm is not needed for babel dataset
             normed_motion = motion
             denormed_motion = self.dataset.t2m_dataset.inv_transform(normed_motion)
             renormed_motion = (denormed_motion - self.dataset.mean_for_eval) / self.dataset.std_for_eval  # according to T2M norms
@@ -525,12 +547,13 @@ class CompMDMUnfoldingGeneratedDataset2(Dataset):
             word_emb, pos_oh = self.w_vectorizer[token]
             pos_one_hots.append(pos_oh[None, :])
             word_embeddings.append(word_emb[None, :])
+
         pos_one_hots = np.concatenate(pos_one_hots, axis=0)
         word_embeddings = np.concatenate(word_embeddings, axis=0)
 
         return word_embeddings, pos_one_hots, caption, sent_len, motion, m_length, '_'.join(tokens), []
 
-import  numpy as np
+
 def pad_sample_with_zeros(sample, max_len=250):
     # pad inp, change lenghts, and pad is transition
     seq_len, n_feats = sample.shape
@@ -540,15 +563,17 @@ def pad_sample_with_zeros(sample, max_len=250):
     sample = np.concatenate((sample, sample_padding))
     return sample
 
+
 class CompMDMUnfoldingGeneratedDataset(Dataset):
+
     def __init__(self, args, model, diffusion, dataloader, mm_num_samples, mm_num_repeats, max_motion_length, num_samples_limit, scale=1., num_unfoldings=10):
         self.dataloader = dataloader
         self.dataset = dataloader.dataset
         assert mm_num_samples < len(dataloader.dataset)
+
         use_ddim = False
         clip_denoised = False
         self.max_motion_length = max_motion_length
-
         self.num_steps_to_generate = num_unfoldings
 
         # Will be changed later by the evaluation script for each copy of this dataset
@@ -570,8 +595,6 @@ class CompMDMUnfoldingGeneratedDataset(Dataset):
         print('mm_idxs', mm_idxs)
 
         model.eval()
-
-
         with torch.no_grad():
             for i, (motion, model_kwargs) in tqdm(enumerate(dataloader)):
 
@@ -588,12 +611,10 @@ class CompMDMUnfoldingGeneratedDataset(Dataset):
                 #     if args.dataset =='babel':
                 #         model_kwargs['y']['lengths'][ii] = min(
                 #             model_kwargs['y']['lengths'][ii] + 2 * args.handshake_size, 250)
-
-                    # model_kwargs['y']['lengths'][ii] = min(model_kwargs['y']['lengths'][ii] + 2 * args.handshake_size, 196 if args.dataset == 'humanml' else 250)
+                #     model_kwargs['y']['lengths'][ii] = min(model_kwargs['y']['lengths'][ii] + 2 * args.handshake_size, 196 if args.dataset == 'humanml' else 250)
                     
                 # model_kwargs['y']['lengths'][0] -= args.handshake_size #first and last.
                 # model_kwargs['y']['lengths'][-1] -= args.handshake_size
-
 
                 # Old version:
                 max_arb_len = model_kwargs['y']['lengths'].max()
@@ -604,8 +625,8 @@ class CompMDMUnfoldingGeneratedDataset(Dataset):
                         model_kwargs['y']['lengths'][ii] = max_arb_len
                     if len_s < min_arb_len:
                         model_kwargs['y']['lengths'][ii] = min_arb_len
+                
                 max_arb_len = model_kwargs['y']['lengths'].max() #+ 2 * args.handshake_size
-
                 n_frames = max_arb_len
 
                 if num_samples_limit is not None and len(generated_motion) >= num_samples_limit:
@@ -628,8 +649,10 @@ class CompMDMUnfoldingGeneratedDataset(Dataset):
 
                     if scale != 1.:
                         model_kwargs['y']['scale'] = torch.ones(batch_size, device=dist_util.dev()) * scale
-                    samples_per_rep_list, samples_type = double_take_arb_len(args, diffusion, model, model_kwargs,
-                                                                     n_frames=n_frames, eval_mode=True)
+
+                    samples_per_rep_list, \
+                    samples_type = double_take_arb_len(args, diffusion, model, model_kwargs,
+                                                        n_frames=n_frames, eval_mode=True)
                     # if args.double_take:
                     #     all_samples = samples_per_rep_list[1]  # we only do one rep
                     # else:
@@ -643,24 +666,24 @@ class CompMDMUnfoldingGeneratedDataset(Dataset):
                             continue
                         step_sizes[ii] = step_sizes[ii - 1] + len_i - args.handshake_size
                     final_n_frames = step_sizes[-1]
+                    
                     unfolded = unfold_sample_arb_len(sample, args.handshake_size, step_sizes, final_n_frames, model_kwargs)
-
                     tokens = [t.split('_') for t in model_kwargs['y']['tokens']]
-
                     max_motion_length = int(model_kwargs['y']['lengths'].max())
 
                     if t == 0:
                         if args.eval_on == "motion":
                             sub_dicts = [{
-                                        # eval on seq
-                                        'motion': pad_sample_with_zeros(unfolded[..., step_sizes[bs_i] - model_kwargs['y']['lengths'][bs_i] + args.handshake_size:
-                                                                step_sizes[bs_i] - args.handshake_size].squeeze().permute(1, 0).cpu().numpy(), max_motion_length),
-                                        'length': model_kwargs['y']['lengths'][bs_i] - 2*args.handshake_size,
-                                        'caption': model_kwargs['y']['text'][bs_i],
-                                        'tokens': tokens[bs_i],
-                                        'cap_len': len(tokens[bs_i]),
-                                        'is_transition': model_kwargs['y']['is_transition'][bs_i][:args.handshake_size]
-                                        } for bs_i in range(1, dataloader.batch_size - 1)] #-1)] uncomment the -1 for transitions
+                                # eval on seq
+                                'motion': pad_sample_with_zeros(unfolded[..., step_sizes[bs_i] - model_kwargs['y']['lengths'][bs_i] + args.handshake_size:
+                                                        step_sizes[bs_i] - args.handshake_size].squeeze().permute(1, 0).cpu().numpy(), max_motion_length),
+                                'length': model_kwargs['y']['lengths'][bs_i] - 2*args.handshake_size,
+                                'caption': model_kwargs['y']['text'][bs_i],
+                                'tokens': tokens[bs_i],
+                                'cap_len': len(tokens[bs_i]),
+                                'is_transition': model_kwargs['y']['is_transition'][bs_i][:args.handshake_size]
+                            } for bs_i in range(1, dataloader.batch_size - 1)] #-1)] uncomment the -1 for transitions
+                            
                             sub_dicts += [{
                                 'motion': pad_sample_with_zeros(unfolded[..., :step_sizes[0] - args.handshake_size].squeeze().permute(1, 0).cpu().numpy(), max_motion_length),
                                 'length': model_kwargs['y']['lengths'][0] - args.handshake_size,
@@ -669,58 +692,64 @@ class CompMDMUnfoldingGeneratedDataset(Dataset):
                                 'cap_len': len(tokens[0]),
                                 'is_transition': model_kwargs['y']['is_transition'][0][:args.handshake_size]
                             }]
+
                             sub_dicts += [{
-                                'motion': pad_sample_with_zeros(unfolded[..., step_sizes[-1] - model_kwargs['y']['lengths'][-1] + args.handshake_size:
-                                                                              ].squeeze().permute(1, 0).cpu().numpy(), max_motion_length),
+                                'motion': pad_sample_with_zeros(unfolded[..., step_sizes[-1] - model_kwargs['y']['lengths'][-1] + args.handshake_size:].squeeze().permute(1, 0).cpu().numpy(), max_motion_length),
                                 'length': model_kwargs['y']['lengths'][-1] - args.handshake_size,
                                 'caption': model_kwargs['y']['text'][-1],
                                 'tokens': tokens[-1],
                                 'cap_len': len(tokens[-1]),
                                 'is_transition': model_kwargs['y']['is_transition'][-1][:args.handshake_size]
                             }]
+                
                         elif args.eval_on == "transition":
                             sub_dicts = [{
-                                        'motion': unfolded[..., step_sizes[bs_i]-args.handshake_size-(args.transition_margins//2):
-                                                                step_sizes[bs_i]+(args.transition_margins//2)].squeeze().permute(1, 0).cpu().numpy(),
-                                        'length': args.handshake_size + args.transition_margins,
-                                        'caption': model_kwargs['y']['text'][bs_i],
-                                        'tokens': tokens[bs_i],
-                                        'cap_len': len(tokens[bs_i]),
-                                        'is_transition': model_kwargs['y']['is_transition'][bs_i][:args.handshake_size]
-                                        } for bs_i in range(0, dataloader.batch_size - 1)] #uncomment the -1 for transitions
+                                'motion': unfolded[..., step_sizes[bs_i]-args.handshake_size-(args.transition_margins//2):step_sizes[bs_i]+(args.transition_margins//2)].squeeze().permute(1, 0).cpu().numpy(),
+                                'length': args.handshake_size + args.transition_margins,
+                                'caption': model_kwargs['y']['text'][bs_i],
+                                'tokens': tokens[bs_i],
+                                'cap_len': len(tokens[bs_i]),
+                                'is_transition': model_kwargs['y']['is_transition'][bs_i][:args.handshake_size]
+                            } for bs_i in range(0, dataloader.batch_size - 1)] # uncomment the -1 for transitions
+                        
                         else:
                             print("Error")
+
                         generated_motion += sub_dicts
 
                     if is_mm:
-                        mm_motions += [{'motion': sample[bs_i],
-                                        'length': all_lengths[bs_i],
-                                        } for bs_i in range(dataloader.batch_size)]
+                        mm_motions += [{
+                            'motion': sample[bs_i],
+                            'length': all_lengths[bs_i],
+                        } for bs_i in range(dataloader.batch_size)]
 
                 if is_mm:
                     mm_generated_motions += [{
-                                    'caption': all_texts[bs_i],
-                                    'tokens': all_tokens[bs_i],
-                                    'cap_len': [len(e) for e in all_tokens[bs_i]],
-                                    'mm_motions': mm_motions[bs_i::dataloader.batch_size],  # collect all 10 repeats from the (32*10) generated motions
-                                    } for bs_i in range(dataloader.batch_size)]
-
+                        'caption': all_texts[bs_i],
+                        'tokens': all_tokens[bs_i],
+                        'cap_len': [len(e) for e in all_tokens[bs_i]],
+                        'mm_motions': mm_motions[bs_i::dataloader.batch_size],  # collect all 10 repeats from the (32*10) generated motions
+                    } for bs_i in range(dataloader.batch_size)]
 
         self.generated_motion = generated_motion
         self.mm_generated_motion = mm_generated_motions
         self.w_vectorizer = dataloader.dataset.w_vectorizer
 
-
     def __len__(self):
         return len(self.generated_motion)
 
-
     def __getitem__(self, item):
         data = self.generated_motion[item]
-        motion, m_length, caption, tokens, transitions = data['motion'], data['length'], data['caption'], data['tokens'], data['is_transition']
+        motion = data['motion']
+        m_length = data['length']
+        caption = data['caption']
+        tokens = data['tokens']
+        transitions = data['is_transition']
         sent_len = data['cap_len']
 
-        if self.dataset.load_mode == 'eval' and self.dataset.dataset_name != 'babel':  # re-norm is not needed for babel dataset
+        if self.dataset.load_mode == 'eval' \
+        and self.dataset.dataset_name != 'babel':  
+            # re-norm is not needed for babel dataset
             normed_motion = motion
             denormed_motion = self.dataset.t2m_dataset.inv_transform(normed_motion)
             renormed_motion = (denormed_motion - self.dataset.mean_for_eval) / self.dataset.std_for_eval  # according to T2M norms
@@ -733,6 +762,7 @@ class CompMDMUnfoldingGeneratedDataset(Dataset):
             word_emb, pos_oh = self.w_vectorizer[token]
             pos_one_hots.append(pos_oh[None, :])
             word_embeddings.append(word_emb[None, :])
+            
         pos_one_hots = np.concatenate(pos_one_hots, axis=0)
         word_embeddings = np.concatenate(word_embeddings, axis=0)
 

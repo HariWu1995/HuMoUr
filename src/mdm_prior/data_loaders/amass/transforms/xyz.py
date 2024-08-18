@@ -19,18 +19,17 @@ from torch import Tensor
 
 from .base import Datastruct, dataclass, Transform
 # from teach.data.tools import collate_tensor_with_padding
-
 from .joints2jfeats import Joints2Jfeats
 
 
 class XYZTransform(Transform):
+
     def __init__(self, joints2jfeats: Joints2Jfeats, **kwargs):
         self.joints2jfeats = joints2jfeats
 
     def Datastruct(self, **kwargs):
         return XYZDatastruct(_joints2jfeats=self.joints2jfeats,
-                             transforms=self,
-                             **kwargs)
+                                transforms=self, **kwargs)
 
     def __repr__(self):
         return "XYZTransform()"
@@ -38,6 +37,7 @@ class XYZTransform(Transform):
 
 @dataclass
 class XYZDatastruct(Datastruct):
+    
     transforms: XYZTransform
     _joints2jfeats: Joints2Jfeats
 

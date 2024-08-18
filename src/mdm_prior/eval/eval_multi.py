@@ -1,43 +1,51 @@
 import os
-
 import torch
 import numpy as np
 
-from data_loaders.get_data import get_dataset_loader
-from data_loaders.humanml.scripts.motion_process import recover_from_ric
-from model.comMDM import ComMDM
-import utils.rotation_conversions as geometry
-from model.cfg_sampler import UnconditionedModel
-from utils import dist_util
-from utils.fixseed import fixseed
-from utils.model_util import load_model, load_model_wo_clip
-from utils.parser_util import evaluation_multi_parser
 from diffusion import logger
+
+import utils.rotation_conversions as geometry
+from utils import dist_util
+from utils.seeding import fix_seed
+
+from src.mdm_prior.data_loaders.get_data import get_dataset_loader
+from src.mdm_prior.data_loaders.humanml.scripts.motion_process import recover_from_ric
+
+from src.mdm_prior.model.comMDM import ComMDM
+from src.mdm_prior.model.cfg_sampler import UnconditionedModel
+
+from src.mdm_prior.utils.model_util import load_model, load_model_wo_clip
+from src.mdm_prior.utils.parser_util import evaluation_multi_parser
 
 
 def extract_motions(_sample0, _sample1, dataset):
     canon0, _sample0 = torch.split(_sample0, [1, _sample0.shape[-1] - 1], dim=-1)
-    canon0 = dataset.dataset.t2m_dataset.rebuilt_canon(canon0[:, :4, 0, 0])
     canon1, _sample1 = torch.split(_sample1, [1, _sample1.shape[-1] - 1], dim=-1)
+
+    canon0 = dataset.dataset.t2m_dataset.rebuilt_canon(canon0[:, :4, 0, 0])
     canon1 = dataset.dataset.t2m_dataset.rebuilt_canon(canon1[:, :4, 0, 0])
+
     diff_trans = canon1[:, -3:] - canon0[:, -3:]
+
     _rot0 = geometry.rotation_6d_to_matrix(canon0[:, :6])
     _rot1 = geometry.rotation_6d_to_matrix(canon1[:, :6])
+
     diff_rot = torch.matmul(_rot0, _rot1.permute(0, 2, 1)).float().cpu()
 
     n_joints = 22 if _sample0.shape[1] == 263 else 21
+
     _sample0 = dataset.dataset.t2m_dataset.inv_transform(_sample0.cpu().permute(0, 2, 3, 1)).float()
     _sample0 = recover_from_ric(_sample0, n_joints)
     _sample0 = _sample0.view(-1, *_sample0.shape[2:]).permute(0, 2, 3, 1)
 
     # _sample1 = model_kwargs['y']['other_motion']
     if _sample1 is not None:
-        _sample1 = dataset.dataset.t2m_dataset.inv_transform(
-            _sample1.cpu().permute(0, 2, 3, 1)).float()
+        _sample1 = dataset.dataset.t2m_dataset.inv_transform(_sample1.cpu().permute(0, 2, 3, 1)).float()
         _sample1 = recover_from_ric(_sample1, n_joints)
         _sample1 = torch.matmul(diff_rot.view(-1, 1, 1, 1, 3, 3), _sample1.unsqueeze(-1)).squeeze(-1)
         _sample1 = _sample1.view(-1, *_sample1.shape[2:]).permute(0, 2, 3, 1).cpu().numpy()
         _sample1 += diff_trans.view(-1, 1, 3, 1).cpu().numpy()
+
     return _sample0, _sample1
 
 
@@ -52,6 +60,7 @@ def sample_with_prefix(model, diffusion, data):
 
     model_kwargs['y']['inpainting_mask'] = torch.ones_like(input_motions, dtype=torch.bool,
                                                            device=input_motions.device)  # True means use gt motion
+    
     for i, length in enumerate(model_kwargs['y']['lengths'].cpu().numpy()):
         # start_idx int(args.prefix_end * length)
         start_idx = 20
@@ -60,17 +69,17 @@ def sample_with_prefix(model, diffusion, data):
         start_idx:] = False  # do inpainting in those frames
 
     model_device = next(model.parameters()).device
-    model_kwargs['y'] = {key: val.to(model_device) if torch.is_tensor(val) else val for key, val in
-                         model_kwargs['y'].items()}
-    model_kwargs['y']['inpainted_motion_multi'][0] = model_kwargs['y']['inpainted_motion_multi'][0].to(
-        model_device)
-    model_kwargs['y']['inpainted_motion_multi'][1] = model_kwargs['y']['inpainted_motion_multi'][1].to(
-        model_device)
+    model_kwargs['y'] = {
+                            key: val.to(model_device) 
+                            if torch.is_tensor(val) else val 
+                            for key, val in model_kwargs['y'].items()
+                        }
+    model_kwargs['y']['inpainted_motion_multi'][0] = model_kwargs['y']['inpainted_motion_multi'][0].to(model_device)
+    model_kwargs['y']['inpainted_motion_multi'][1] = model_kwargs['y']['inpainted_motion_multi'][1].to(model_device)
 
     sample_fn = diffusion.p_sample_loop
 
     gt, gt1 = extract_motions(input_motions.cpu(), model_kwargs['y']['other_motion'].cpu(), data)
-
     del model_kwargs['y']['other_motion']  # not necessary - just to make sure
 
     sample = sample_fn(
@@ -102,7 +111,11 @@ def sample_with_prefix(model, diffusion, data):
 
     gt_save = process_to_save(gt, gt1)
     sample_save = process_to_save(sample, sample1)
-    return {'pred': sample_save, 'gt': gt_save}
+    return {
+        'pred': sample_save, 
+        'gt': gt_save,
+    }
+
 
 def evaluate_multi(model, diffusion, data, vis_dir=None):
     uncond_model = UnconditionedModel(model)  # make sure we eval unconditioned model
@@ -122,6 +135,7 @@ def evaluate_multi(model, diffusion, data, vis_dir=None):
     prediction_1, prediction_root_1, prediction_no_root_1 = _slice(results, 1)
     prediction_2, prediction_root_2, prediction_no_root_2 = _slice(results, 2)
     prediction_3, prediction_root_3, prediction_no_root_3 = _slice(results, 3)
+
     gt_1, gt_root_1, gt_no_root_1 = _slice(output_seq, 1)
     gt_2, gt_root_2, gt_no_root_2 = _slice(output_seq, 2)
     gt_3, gt_root_3, gt_no_root_3 = _slice(output_seq, 3)
@@ -154,13 +168,16 @@ def evaluate_multi(model, diffusion, data, vis_dir=None):
         'loss_no_root3': {'mean': loss_no_root3},
     }
 
+
 if __name__ == '__main__':
     args = evaluation_multi_parser()
-    fixseed(args.seed)
+    fix_seed(args.seed)
+    
+    n_samples = 1000
+    
     name = os.path.basename(os.path.dirname(args.model_path))
     niter = os.path.basename(args.model_path).replace('model', '').replace('.pt', '')
     log_file = os.path.join(os.path.dirname(args.model_path), 'eval_prefix_{}_{}'.format(name, niter))
-    n_samples = 1000
     log_file += f'_{args.eval_mode}'
     log_file += f'_{n_samples}samples'
     log_file += '.log'
@@ -181,5 +198,6 @@ if __name__ == '__main__':
     with open(log_file, 'w') as f:
         # json.dump(eval_dict, f, indent=4)
         f.write(str(eval_dict))
+        
     print(eval_dict)
     print(f'Saved to [{log_file}]')

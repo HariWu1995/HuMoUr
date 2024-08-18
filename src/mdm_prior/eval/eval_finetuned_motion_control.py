@@ -1,27 +1,34 @@
-from diffusion.inpainting_gaussian_diffusion import InpaintingGaussianDiffusion
-from diffusion.respace import SpacedDiffusion
-from utils.parser_util import evaluation_inpainting_parser
-from utils.fixseed import fixseed
 from datetime import datetime
-from data_loaders.humanml.motion_loaders.model_motion_loaders import get_mdm_loader  # get_motion_loader
-from data_loaders.humanml.utils.metrics import *
-from data_loaders.humanml.networks.evaluator_wrapper import EvaluatorMDMWrapper
 from collections import OrderedDict
-from data_loaders.humanml.scripts.motion_process import *
-from data_loaders.humanml.utils.utils import *
-from utils.model_util import load_model_blending_and_diffusion
 
 from diffusion import logger
+from diffusion.respace import SpacedDiffusion
+from diffusion.gaussian_diffusion_inpaint import GaussianDiffusionInpainting
+
 from utils import dist_util
-from data_loaders.get_data import get_dataset_loader
-from model.cfg_sampler import wrap_model
+from utils.seeding import fix_seed
+
+from src.mdm_prior.data_loaders.get_data import get_dataset_loader
+from src.mdm_prior.data_loaders.humanml.utils.utils import *
+from src.mdm_prior.data_loaders.humanml.utils.metrics import *
+from src.mdm_prior.data_loaders.humanml.scripts.motion_process import *
+from src.mdm_prior.data_loaders.humanml.networks.evaluator_wrapper import EvaluatorMDMWrapper
+from src.mdm_prior.data_loaders.humanml.motion_loaders.model_motion_loaders import get_mdm_loader  # get_motion_loader
+
+from src.mdm_prior.utils.model_util import load_model_blending_and_diffusion
+from src.mdm_prior.utils.parser_util import evaluation_inpainting_parser
+
+from src.mdm_prior.model.cfg_sampler import wrap_model
+
 
 torch.multiprocessing.set_sharing_strategy('file_system')
+
 
 def evaluate_matching_score(eval_wrapper, motion_loaders, file):
     match_score_dict = OrderedDict({})
     R_precision_dict = OrderedDict({})
     activation_dict = OrderedDict({})
+
     print('========== Evaluating Matching Score ==========')
     for motion_loader_name, motion_loader in motion_loaders.items():
         all_motion_embeddings = []
@@ -29,6 +36,7 @@ def evaluate_matching_score(eval_wrapper, motion_loaders, file):
         all_size = 0
         matching_score_sum = 0
         top_k_count = 0
+
         # print(motion_loader_name)
         with torch.no_grad():
             for idx, batch in enumerate(motion_loader):
@@ -49,7 +57,6 @@ def evaluate_matching_score(eval_wrapper, motion_loaders, file):
                 top_k_count += top_k_mat.sum(axis=0)
 
                 all_size += text_embeddings.shape[0]
-
                 all_motion_embeddings.append(motion_embeddings.cpu().numpy())
 
             all_motion_embeddings = np.concatenate(all_motion_embeddings, axis=0)
@@ -74,6 +81,7 @@ def evaluate_matching_score(eval_wrapper, motion_loaders, file):
 def evaluate_fid(eval_wrapper, groundtruth_loader, activation_dict, file):
     eval_dict = OrderedDict({})
     gt_motion_embeddings = []
+
     print('========== Evaluating FID ==========')
     with torch.no_grad():
         for idx, batch in enumerate(groundtruth_loader):
@@ -83,6 +91,7 @@ def evaluate_fid(eval_wrapper, groundtruth_loader, activation_dict, file):
                 m_lens=m_lens
             )
             gt_motion_embeddings.append(motion_embeddings.cpu().numpy())
+
     gt_motion_embeddings = np.concatenate(gt_motion_embeddings, axis=0)
     gt_mu, gt_cov = calculate_activation_statistics(gt_motion_embeddings)
 
@@ -94,11 +103,13 @@ def evaluate_fid(eval_wrapper, groundtruth_loader, activation_dict, file):
         print(f'---> [{model_name}] FID: {fid:.4f}')
         print(f'---> [{model_name}] FID: {fid:.4f}', file=file, flush=True)
         eval_dict[model_name] = fid
+
     return eval_dict
 
 
 def evaluate_diversity(activation_dict, file, diversity_times):
     eval_dict = OrderedDict({})
+
     print('========== Evaluating Diversity ==========')
     for model_name, motion_embeddings in activation_dict.items():
         diversity = calculate_diversity(motion_embeddings, diversity_times)
@@ -110,6 +121,7 @@ def evaluate_diversity(activation_dict, file, diversity_times):
 
 def evaluate_multimodality(eval_wrapper, mm_motion_loaders, file, mm_num_times):
     eval_dict = OrderedDict({})
+
     print('========== Evaluating MultiModality ==========')
     for model_name, mm_motion_loader in mm_motion_loaders.items():
         mm_motion_embeddings = []
@@ -119,14 +131,17 @@ def evaluate_multimodality(eval_wrapper, mm_motion_loaders, file, mm_num_times):
                 motions, m_lens = batch
                 motion_embedings = eval_wrapper.get_motion_embeddings(motions[0], m_lens[0])
                 mm_motion_embeddings.append(motion_embedings.unsqueeze(0))
+        
         if len(mm_motion_embeddings) == 0:
             multimodality = 0
         else:
             mm_motion_embeddings = torch.cat(mm_motion_embeddings, dim=0).cpu().numpy()
             multimodality = calculate_multimodality(mm_motion_embeddings, mm_num_times)
+       
         print(f'---> [{model_name}] Multimodality: {multimodality:.4f}')
         print(f'---> [{model_name}] Multimodality: {multimodality:.4f}', file=file, flush=True)
         eval_dict[model_name] = multimodality
+
     return eval_dict
 
 
@@ -139,11 +154,13 @@ def get_metric_statistics(values, replication_times):
 
 def evaluation(eval_wrapper, gt_loader, eval_motion_loaders, log_file, replication_times, diversity_times, mm_num_times, run_mm=False):
     with open(log_file, 'w') as f:
-        all_metrics = OrderedDict({'Matching Score': OrderedDict({}),
-                                   'R_precision': OrderedDict({}),
-                                   'FID': OrderedDict({}),
-                                   'Diversity': OrderedDict({}),
-                                   'MultiModality': OrderedDict({})})
+        all_metrics = OrderedDict({
+            'Matching Score': OrderedDict({}),
+            'R_precision': OrderedDict({}),
+                    'FID': OrderedDict({}),
+                'Diversity': OrderedDict({}),
+            'MultiModality': OrderedDict({}),
+        })
         for replication in range(replication_times):
             motion_loaders = {}
             mm_motion_loaders = {}
@@ -205,33 +222,36 @@ def evaluation(eval_wrapper, gt_loader, eval_motion_loaders, log_file, replicati
                     else:
                         all_metrics['MultiModality'][key] += [item]
 
-
         # print(all_metrics['Diversity'])
         mean_dict = {}
         for metric_name, metric_dict in all_metrics.items():
             print('========== %s Summary ==========' % metric_name)
             print('========== %s Summary ==========' % metric_name, file=f, flush=True)
+            
             for model_name, values in metric_dict.items():
                 # print(metric_name, model_name)
                 mean, conf_interval = get_metric_statistics(np.array(values), replication_times)
                 mean_dict[metric_name + '_' + model_name] = mean
                 # print(mean, mean.dtype)
+                
                 if isinstance(mean, np.float64) or isinstance(mean, np.float32):
                     print(f'---> [{model_name}] Mean: {mean:.4f} CInterval: {conf_interval:.4f}')
                     print(f'---> [{model_name}] Mean: {mean:.4f} CInterval: {conf_interval:.4f}', file=f, flush=True)
+                
                 elif isinstance(mean, np.ndarray):
                     line = f'---> [{model_name}]'
                     for i in range(len(mean)):
                         line += '(top %d) Mean: %.4f CInt: %.4f;' % (i+1, mean[i], conf_interval[i])
                     print(line)
                     print(line, file=f, flush=True)
+
         return mean_dict
 
 
 if __name__ == '__main__':
     args_list = evaluation_inpainting_parser()
     args = args_list[0]
-    fixseed(args.seed)
+    fix_seed(args.seed)
     args.batch_size = 32 # This must be 32! Don't change it! otherwise it will cause a bug in R precision calc!
     name = os.path.basename(os.path.dirname(args.model_path))
     niter = os.path.basename(args.model_path).replace('model', '').replace('.pt', '')
@@ -287,13 +307,13 @@ if __name__ == '__main__':
     num_actions = gen_loader.dataset.num_actions
 
     logger.log("Creating model and diffusion...")
-    DiffusionClass =  InpaintingGaussianDiffusion if args.filter_noise else SpacedDiffusion
+    DiffusionClass =  GaussianDiffusionInpainting if args.filter_noise else SpacedDiffusion
     model, diffusion = load_model_blending_and_diffusion(args_list, gen_loader, dist_util.dev(), DiffusionClass=DiffusionClass)
 
     eval_motion_loaders = {
-        ################
-        ## HumanML3D Dataset##
-        ################
+        #####################
+        # HumanML3D Dataset #
+        #####################
         'vald': lambda: get_mdm_loader(
             args, model, diffusion, args.batch_size,
             gen_loader, mm_num_samples, mm_num_repeats, gt_loader.dataset.opt.max_motion_length, num_samples_limit, args.guidance_param

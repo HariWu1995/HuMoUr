@@ -4,13 +4,12 @@
 # This source code is licensed under the license found in the
 # LICENSE file in the root directory of this source tree.
 #
-
 import torch
 import numpy as np
 
 _EPS4 = np.finfo(float).eps * 4.0
-
 _FLOAT_EPS = np.finfo(np.float).eps
+
 
 # PyTorch-backed implementations
 def qinv(q):
@@ -342,7 +341,8 @@ def cont6d_to_matrix_np(cont6d):
 
 
 def qpow(q0, t, dtype=torch.float):
-    ''' q0 : tensor of quaternions
+    ''' 
+    q0 : tensor of quaternions
     t: tensor of powers
     '''
     q0 = qnormalize(q0)
@@ -375,7 +375,6 @@ def qslerp(q0, q1, t):
     Returns:
     Tensor of Slerps: t.shape + q0.shape
     '''
-
     q0 = qnormalize(q0)
     q1 = qnormalize(q1)
     q_ = qpow(qmul(q1, qinv(q0)), t)

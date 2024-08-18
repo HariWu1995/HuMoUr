@@ -1,24 +1,27 @@
-import copy
-import functools
 import os
 import time
+import copy
+import functools
+import blobfile as bf
 from types import SimpleNamespace
+from tqdm import tqdm
+
 import numpy as np
 
-import blobfile as bf
 import torch
 from torch.optim import AdamW
 
 from diffusion import logger
-from utils import dist_util
 from diffusion.fp16_util import MixedPrecisionTrainer
 from diffusion.resample import LossAwareSampler, UniformSampler
-from tqdm import tqdm
 from diffusion.resample import create_named_schedule_sampler
-from data_loaders.humanml.networks.evaluator_wrapper import EvaluatorMDMWrapper
-from eval import eval_humanml_double_take, eval_multi
-from data_loaders.get_data import get_dataset_loader
+
 from utils.misc import load_model_wo_clip
+from utils import dist_util
+
+from src.mdm_prior.eval import eval_humanml_double_take, eval_multi
+from src.mdm_prior.data_loaders.get_data import get_dataset_loader
+from src.mdm_prior.data_loaders.humanml.networks.evaluator_wrapper import EvaluatorMDMWrapper
 
 
 # For ImageNet experiments, this was a good default value.
@@ -28,6 +31,7 @@ INITIAL_LOG_LOSS_SCALE = 20.0
 
 
 class TrainLoop:
+
     def __init__(self, args, train_platform, model, diffusion, data):
         self.args = args
         self.dataset = args.dataset
@@ -54,8 +58,6 @@ class TrainLoop:
         self.num_epochs = self.num_steps // len(self.data) + 1
         self.is_multi = hasattr(self.args, 'multi_arch')
 
-        self.sync_cuda = torch.cuda.is_available()
-
         self._load_and_sync_parameters()
         self.mp_trainer = MixedPrecisionTrainer(
             model=self.model,
@@ -74,16 +76,20 @@ class TrainLoop:
             # Model was resumed, either due to a restart or a checkpoint
             # being specified at the command line.
 
+        self.sync_cuda = torch.cuda.is_available()
         self.device = torch.device("cpu")
         if torch.cuda.is_available() and dist_util.dev() != 'cpu':
             self.device = torch.device(dist_util.dev())
 
         self.schedule_sampler_type = 'uniform'
         self.schedule_sampler = create_named_schedule_sampler(self.schedule_sampler_type, diffusion)
+        
         self.eval_wrapper, self.eval_data, self.eval_gt_data = None, None, None
-        if args.dataset in ['humanml', 'babel'] and args.eval_during_training and not self.is_multi:
+        if args.dataset in ['humanml', 'babel'] \
+        and args.eval_during_training and not self.is_multi:
             if args.dataset == 'babel':
                 args.eval_split = 'val' # FIXME - overriding flag
+
             mm_num_samples = 0  # mm is super slow hence we won't run it during training
             mm_num_repeats = 0  # mm is super slow hence we won't run it during training
             gen_loader = get_dataset_loader(name=args.dataset, batch_size=args.eval_batch_size, num_frames=args.num_frames,
@@ -91,8 +97,7 @@ class TrainLoop:
                                             load_mode='eval')
 
             self.eval_gt_data = get_dataset_loader(name=args.dataset, batch_size=args.eval_batch_size, num_frames=args.num_frames,
-                                                   split=args.eval_split, short_db=args.short_db,
-                                                   load_mode='gt')
+                                                   split=args.eval_split, short_db=args.short_db, load_mode='gt')
             self.eval_wrapper = EvaluatorMDMWrapper(args.dataset, dist_util.dev())
             self.eval_data = {
                 'test': lambda: eval_humanml_double_take.get_mdm_loader(
@@ -101,6 +106,7 @@ class TrainLoop:
                     args.eval_num_samples, scale=1., num_unfoldings=1,
                 )
             }
+
         elif self.is_multi and args.multi_dataset == 'pw3d' and args.multi_train_mode == 'prefix' and args.eval_during_training:
             n_samples = 256
             self.eval_data = get_dataset_loader(name=args.multi_dataset, batch_size=n_samples, num_frames=None,
@@ -163,9 +169,12 @@ class TrainLoop:
                     # Run for a finite amount of time in integration tests.
                     if os.environ.get("DIFFUSION_TRAINING_TEST", "") and self.step > 0:
                         return
+
                 self.step += 1
+
             if not (not self.lr_anneal_steps or self.step + self.resume_step < self.lr_anneal_steps):
                 break
+
         # Save the last checkpoint if it wasn't already saved.
         if (self.step - 1) % self.save_interval != 0:
             self.save()
@@ -178,21 +187,24 @@ class TrainLoop:
         if self.eval_wrapper is not None:
             print('Running evaluation loop: [Should take about 90 min]')
             log_file = os.path.join(self.save_dir, f'eval_humanml_{(self.step + self.resume_step):09d}.log')
+            
             diversity_times = 300
             mm_num_times = 0  # mm is super slow hence we won't run it during training
+
             eval_dict = eval_humanml_double_take.evaluation(
                 self.eval_wrapper, self.eval_gt_data, self.eval_data, log_file,
-                replication_times=self.args.eval_rep_times, diversity_times=diversity_times, mm_num_times=mm_num_times, run_mm=False)
+                replication_times=self.args.eval_rep_times, diversity_times=diversity_times, mm_num_times=mm_num_times, run_mm=False
+            )
+            
             print(eval_dict)
             for k, v in eval_dict.items():
                 if k.startswith('R_precision'):
                     for i in range(len(v)):
                         self.train_platform.report_scalar(name=f'top{i + 1}_' + k, value=v[i],
-                                                          iteration=self.step + self.resume_step,
-                                                          group_name='Eval')
+                                                          iteration=self.step + self.resume_step, group_name='Eval')
                 else:
-                    self.train_platform.report_scalar(name=k, value=v, iteration=self.step + self.resume_step,
-                                                      group_name='Eval')
+                    self.train_platform.report_scalar(name=k, value=v, 
+                                                      iteration=self.step + self.resume_step, group_name='Eval')
 
         elif self.is_multi and self.args.multi_dataset == 'pw3d' and self.eval_data is not None:
             eval_dict = eval_multi.evaluate_multi(self.model, self.diffusion, self.eval_data)
@@ -200,13 +212,12 @@ class TrainLoop:
             for k, v in eval_dict.items():
                 self.train_platform.report_scalar(name=k, value=v['mean'], iteration=self.step, group_name='Eval')
 
-
-
         elif self.dataset in ['humanact12', 'uestc']:
             eval_args = SimpleNamespace(num_seeds=self.args.eval_rep_times, num_samples=self.args.eval_num_samples,
                                         batch_size=self.args.eval_batch_size, device=self.device, guidance_param = 1,
                                         dataset=self.dataset, cond_mode='action',
                                         model_path=os.path.join(self.save_dir, self.ckpt_file_name()))
+            
             eval_dict = eval_humanact12_uestc.evaluate(eval_args, model=self.model, diffusion=self.diffusion, data=self.data.dataset)
             print(f'Evaluation results on {self.dataset}: {sorted(eval_dict["feats"].items())}')
             for k, v in eval_dict["feats"].items():
@@ -214,7 +225,6 @@ class TrainLoop:
 
         end_eval = time.time()
         print(f'Evaluation time: {round(end_eval-start_eval)/60}min')
-
 
     def run_step(self, batch, cond):
         self.forward_backward(batch, cond)
@@ -262,6 +272,7 @@ class TrainLoop:
     def _anneal_lr(self):
         if not self.lr_anneal_steps:
             return
+
         frac_done = (self.step + self.resume_step) / self.lr_anneal_steps
         lr = self.lr * (1 - frac_done)
         for param_group in self.opt.param_groups:
@@ -271,10 +282,8 @@ class TrainLoop:
         logger.logkv("step", self.step + self.resume_step)
         logger.logkv("samples", (self.step + self.resume_step + 1) * self.global_batch)
 
-
     def ckpt_file_name(self):
         return f"model{(self.step+self.resume_step):09d}.pt"
-
 
     def save(self):
         def save_checkpoint(params):
@@ -291,7 +300,6 @@ class TrainLoop:
                 torch.save(state_dict, f)
 
         save_checkpoint(self.mp_trainer.master_params)
-
         with bf.BlobFile(
             bf.join(self.save_dir, f"opt{(self.step+self.resume_step):09d}.pt"),
             "wb",
@@ -333,3 +341,4 @@ def log_loss_dict(diffusion, ts, losses):
         for sub_t, sub_loss in zip(ts.cpu().numpy(), values.detach().cpu().numpy()):
             quartile = int(4 * sub_t / diffusion.num_timesteps)
             logger.logkv_mean(f"{key}_q{quartile}", sub_loss)
+

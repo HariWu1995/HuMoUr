@@ -5,19 +5,26 @@ Train a diffusion model on images.
 
 import os
 import json
-from model.comMDM import ComMDM
-from utils.fixseed import fixseed
-from utils.parser_util import train_multi_args
-from utils import dist_util
-from train.training_loop import TrainLoop
-from data_loaders.get_data import get_dataset_loader
-from utils.model_util import create_model_and_diffusion, load_model_wo_clip, load_pretrained_mdm, load_split_mdm
-from train.train_platforms import ClearmlPlatform, TensorboardPlatform, NoPlatform  # required for the eval operation
+
 import torch
+
+from utils import dist_util
+from utils.seeding import fix_seed
+
+from src.mdm_prior.model.comMDM import ComMDM
+
+from src.mdm_prior.utils.model_util import create_model_and_diffusion, load_model_wo_clip, load_pretrained_mdm, load_split_mdm
+from src.mdm_prior.utils.parser_util import train_multi_args
+
+from src.mdm_prior.train.training_loop import TrainLoop
+from src.mdm_prior.train.train_platforms import ClearmlPlatform, TensorboardPlatform, NoPlatform  # required for the eval operation
+
+from src.mdm_prior.data_loaders.get_data import get_dataset_loader
+
 
 def main():
     args = train_multi_args()
-    fixseed(args.seed)
+    fix_seed(args.seed)
 
     if args.multi_train_mode == 'prefix':
         args.cond_mask_prob = 1.  # Hard-coded! We learn unconditioned in this setting!
@@ -28,10 +35,13 @@ def main():
 
     if args.save_dir is None:
         raise FileNotFoundError('save_dir was not specified.')
+
     elif os.path.exists(args.save_dir) and not args.overwrite:
         raise FileExistsError('save_dir [{}] already exists.'.format(args.save_dir))
+
     elif not os.path.exists(args.save_dir):
         os.makedirs(args.save_dir)
+
     args_path = os.path.join(args.save_dir, 'args.json')
     with open(args_path, 'w') as fw:
         json.dump(vars(args), fw, indent=4, sort_keys=True)
@@ -62,6 +72,7 @@ def main():
     print("Training...")
     TrainLoop(args, train_platform, model, diffusion, data).run_loop()
     train_platform.close()
+
 
 if __name__ == "__main__":
     main()

@@ -1,8 +1,10 @@
 import os
-from argparse import Namespace
-import re
 from os.path import join as pjoin
-from data_loaders.humanml.utils.word_vectorizer import POS_enumerator
+from argparse import Namespace
+
+import re
+
+from src.mdm_prior.data_loaders.humanml.utils.word_vectorizer import POS_enumerator
 
 
 def is_float(numStr):
@@ -13,8 +15,10 @@ def is_float(numStr):
         res = reg.match(str(numStr))
         if res:
             flag = True
+
     except Exception as ex:
         print("is_float() - error: " + str(ex))
+
     return flag
 
 
@@ -33,6 +37,7 @@ def get_opt(opt_path, device):
     skip = ('-------------- End ----------------',
             '------------ Options -------------',
             '\n')
+            
     print('Reading', opt_path)
     with open(opt_path) as f:
         for line in f:

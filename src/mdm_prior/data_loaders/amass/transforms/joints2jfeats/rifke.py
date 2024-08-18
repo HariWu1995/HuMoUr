@@ -26,12 +26,13 @@ from ...tools_teach.geometry import matrix_of_angles
 
 
 class Rifke(Joints2Jfeats):
+
     def __init__(self, jointstype: str = "smplnh",
                  path: Optional[str] = None,
                  normalization: bool = True, #False,
                  forward_filter: bool = False,
                  **kwargs) -> None:
-        #
+        
         path = './data_loaders/amass/deps/transforms/joints2jfeats/rifke/babel-amass'
         super().__init__(path=path, normalization=normalization)
         self.jointstype = jointstype
@@ -70,6 +71,7 @@ class Rifke(Joints2Jfeats):
             forward = gaussian_filter1d(forward, 2)
             # normalize again to get real directions
             forward = torch.nn.functional.normalize(forward, dim=-1)
+
         # changed this also for New pytorch
         angles = torch.atan2(*(forward.transpose(0, -1))).transpose(0, -1)
         vel_angles = torch.diff(angles, dim=-1)
@@ -118,6 +120,7 @@ class Rifke(Joints2Jfeats):
 
         # Rotate the vel_trajectory
         vel_trajectory = torch.einsum("...j,...jk->...k", vel_trajectory_local, rotations)
+        
         # Integrate the trajectory
         # Already have the good dimensionality
         trajectory = torch.cumsum(vel_trajectory, dim=-2)

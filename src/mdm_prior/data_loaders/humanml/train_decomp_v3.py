@@ -1,22 +1,21 @@
 import os
+from os.path import join as pjoin
 from copy import deepcopy
 
-from os.path import join as pjoin
-
-import data_loaders.humanml.utils.paramUtil as paramUtil
-from data_loaders.amass.sampling import FrameSampler
-from data_loaders.amass.transforms import SMPLTransform
-from data_loaders.get_data import get_dataset_loader
-from data_loaders.humanml import collect_babel_stats
-from data_loaders.humanml.options.train_options import TrainDecompOptions
-from data_loaders.humanml.utils.plot_script import *
-
-from data_loaders.humanml.networks.modules import *
-from data_loaders.humanml.networks.trainers import DecompTrainerV3
-from data_loaders.humanml.data.dataset import MotionDatasetV2, BABEL_MotionDatasetV2
-from data_loaders.humanml.scripts.motion_process import *
 from torch.utils.data import DataLoader
-from data_loaders.humanml.utils.word_vectorizer import WordVectorizer, POS_enumerator
+
+import src.mdm_prior.data_loaders.humanml.utils.paramUtil as paramUtil
+from src.mdm_prior.data_loaders.amass.sampling import FrameSampler
+from src.mdm_prior.data_loaders.amass.transforms import SMPLTransform
+from src.mdm_prior.data_loaders.get_data import get_dataset_loader
+from src.mdm_prior.data_loaders.humanml import collect_babel_stats
+from src.mdm_prior.data_loaders.humanml.utils.plot_script import *
+from src.mdm_prior.data_loaders.humanml.networks.modules import *
+from src.mdm_prior.data_loaders.humanml.data.dataset import MotionDatasetV2, BABEL_MotionDatasetV2
+from src.mdm_prior.data_loaders.humanml.networks.trainers import DecompTrainerV3
+from src.mdm_prior.data_loaders.humanml.utils.word_vectorizer import WordVectorizer, POS_enumerator
+from src.mdm_prior.data_loaders.humanml.scripts.motion_process import *
+from src.mdm_prior.data_loaders.humanml.options.train_options import TrainDecompOptions
 
 
 def plot_t2m(data, save_dir):
@@ -29,6 +28,7 @@ def plot_t2m(data, save_dir):
 
 
 if __name__ == '__main__':
+
     parser = TrainDecompOptions()
     opt = parser.parse()
 
@@ -60,6 +60,7 @@ if __name__ == '__main__':
         radius = 4
         fps = 20
         kinematic_chain = paramUtil.t2m_kinematic_chain
+
     elif opt.dataset_name == 'kit':
         opt.data_root = './dataset/KIT-ML'
         opt.motion_dir = pjoin(opt.data_root, 'new_joint_vecs')
@@ -70,6 +71,7 @@ if __name__ == '__main__':
         opt.dim_pose = 251
         opt.max_motion_length = 196
         kinematic_chain = paramUtil.kit_kinematic_chain
+
     elif opt.dataset_name == 'babel':
         opt.max_epoch *= 20
         opt.foot_contact_entries = 0
@@ -79,12 +81,11 @@ if __name__ == '__main__':
         # opt.data_root = pjoin(opt.checkpoints_dir, opt.dataset_name, 'motion1', 'meta')
         # if not os.path.exists(opt.data_root):
         #     collect_babel_stats.run()
+
     else:
         raise KeyError('Dataset Does Not Exist')
 
-
-    movement_enc = MovementConvEncoder(opt.dim_pose - opt.foot_contact_entries, opt.dim_movement_enc_hidden,
-                                       opt.dim_movement_latent)
+    movement_enc = MovementConvEncoder(opt.dim_pose - opt.foot_contact_entries, opt.dim_movement_enc_hidden, opt.dim_movement_latent)
     movement_dec = MovementConvDecoder(opt.dim_movement_latent, opt.dim_movement_dec_hidden, opt.dim_pose)
 
     all_params = 0
@@ -111,19 +112,26 @@ if __name__ == '__main__':
     else:
         mean = np.load(pjoin(opt.data_root, 'Mean.npy'))
         std = np.load(pjoin(opt.data_root, 'Std.npy'))
+
         dataset_args = {
             'opt': opt, 'mean': mean, 'std': std,
         }
+
         train_split_file = pjoin(opt.data_root, 'train.txt')
         val_split_file = pjoin(opt.data_root, 'val.txt')
-        val_args, train_args = deepcopy(dataset_args), deepcopy(dataset_args)
+        
+        val_args = deepcopy(dataset_args)
+        train_args = deepcopy(dataset_args)
+
         train_args.update({'split_file': train_split_file})
         val_args.update({'split_file': val_split_file})
+
         train_dataset = MotionDatasetV2(**train_args)
         val_dataset = MotionDatasetV2(**val_args)
-        train_loader = DataLoader(train_dataset, batch_size=opt.batch_size, drop_last=True, num_workers=1,
-                                  shuffle=True, pin_memory=True)
-        val_loader = DataLoader(val_dataset, batch_size=opt.batch_size, drop_last=True, num_workers=1,
-                                shuffle=True, pin_memory=True)
+
+        train_loader = DataLoader(train_dataset, batch_size=opt.batch_size, drop_last=True, 
+                                  num_workers=1, shuffle=True, pin_memory=True)
+        val_loader = DataLoader(val_dataset, batch_size=opt.batch_size, drop_last=True, 
+                                num_workers=1, shuffle=True, pin_memory=True)
 
     trainer.train(train_loader, val_loader, plot_t2m)

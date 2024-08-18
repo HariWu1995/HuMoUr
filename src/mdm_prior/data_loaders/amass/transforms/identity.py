@@ -21,6 +21,7 @@ from .base import Datastruct, dataclass, Transform
 
 
 class IdentityTransform(Transform):
+
     def __init__(self, **kwargs):
         return
 
@@ -33,8 +34,8 @@ class IdentityTransform(Transform):
 
 @dataclass
 class IdentityDatastruct(Datastruct):
-    transforms: IdentityTransform
 
+    transforms: IdentityTransform
     features: Optional[Tensor] = None
 
     def __post_init__(self):

@@ -3,11 +3,12 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import clip
-from model.rotation2xyz import Rotation2xyz
 
+from src.mdm_prior.model.rotation2xyz import Rotation2xyz
 
 
 class MDM(nn.Module):
+
     def __init__(self, modeltype, njoints, nfeats, num_actions, translation, pose_rep, glob, glob_rot,
                  latent_dim=256, ff_size=1024, num_layers=8, num_heads=4, dropout=0.1,
                  ablation=None, activation="gelu", legacy=False, data_rep='rot6d', dataset='amass', clip_dim=512,
@@ -28,7 +29,6 @@ class MDM(nn.Module):
         self.translation = translation
 
         self.latent_dim = latent_dim
-
         self.ff_size = ff_size
         self.num_layers = num_layers
         self.num_heads = num_heads
@@ -42,9 +42,9 @@ class MDM(nn.Module):
         self.input_feats = self.njoints * self.nfeats
 
         self.normalize_output = kargs.get('normalize_encoder_output', False)
-
         self.cond_mode = kargs.get('cond_mode', 'no_cond')
         self.cond_mask_prob = kargs.get('cond_mask_prob', 0.)
+
         self.arch = arch
         self.gru_emb_dim = self.latent_dim if self.arch == 'gru' else 0
         self.input_process = InputProcess(self.data_rep, self.input_feats+self.gru_emb_dim, self.latent_dim)
@@ -62,6 +62,7 @@ class MDM(nn.Module):
 
             self.seqTransEncoder = nn.TransformerEncoder(seqTransEncoderLayer,
                                                          num_layers=self.num_layers)
+
         elif self.arch == 'trans_dec':
             print("TRANS_DEC init")
             seqTransDecoderLayer = nn.TransformerDecoderLayer(d_model=self.latent_dim,
@@ -71,9 +72,11 @@ class MDM(nn.Module):
                                                               activation=activation)
             self.seqTransDecoder = nn.TransformerDecoder(seqTransDecoderLayer,
                                                          num_layers=self.num_layers)
+
         elif self.arch == 'gru':
             print("GRU init")
             self.gru = nn.GRU(self.latent_dim, self.latent_dim, num_layers=self.num_layers, batch_first=True)
+        
         else:
             raise ValueError('Please choose correct architecture [trans_enc, trans_dec, gru]')
 
@@ -86,23 +89,23 @@ class MDM(nn.Module):
                 print('Loading CLIP...')
                 self.clip_version = clip_version
                 self.clip_model = self.load_and_freeze_clip(clip_version)
+
             if 'action' in self.cond_mode:
                 self.embed_action = EmbedAction(self.num_actions, self.latent_dim)
                 print('EMBED ACTION')
 
-        self.output_process = OutputProcess(self.data_rep, self.input_feats, self.latent_dim, self.njoints,
-                                            self.nfeats)
-
+        self.output_process = OutputProcess(self.data_rep, self.input_feats, self.latent_dim, self.njoints, self.nfeats)
         self.rot2xyz = Rotation2xyz(device='cpu', dataset=self.dataset)
 
     def parameters_wo_clip(self):
         return [p for name, p in self.named_parameters() if not name.startswith('clip_model.')]
 
     def load_and_freeze_clip(self, clip_version):
-        clip_model, clip_preprocess = clip.load(clip_version, device='cpu',
-                                                jit=False)  # Must set jit=False for training
-        clip.model.convert_weights(
-            clip_model)  # Actually this line is unnecessary since clip by default already on float16
+        # Must set jit=False for training
+        clip_model, clip_preprocess = clip.load(clip_version, device='cpu', jit=False)  
+
+        # Actually this line is unnecessary since clip by default already on float16
+        clip.model.convert_weights(clip_model)  
 
         # Freeze CLIP weights
         clip_model.eval()
@@ -150,6 +153,7 @@ class MDM(nn.Module):
         if 'text' in self.cond_mode:
             enc_text = self.encode_text(y['text'])
             emb += self.embed_text(self.mask_cond(enc_text, force_mask=force_mask))
+
         if 'action' in self.cond_mode:
             action_emb = self.embed_action(y['action'])
             emb += self.mask_cond(action_emb, force_mask=force_mask)
@@ -174,11 +178,13 @@ class MDM(nn.Module):
                 xseq = torch.cat((emb, x), axis=0)
             else:
                 xseq = x
+
             xseq = self.sequence_pos_encoder(xseq)  # [seqlen+1, bs, d]
             if self.emb_trans_dec:
                 output = self.seqTransDecoder(tgt=xseq, memory=emb)[1:] # [seqlen, bs, d] # FIXME - maybe add a causal mask
             else:
                 output = self.seqTransDecoder(tgt=xseq, memory=emb)
+
         elif self.arch == 'gru':
             xseq = x
             xseq = self.sequence_pos_encoder(xseq)  # [seqlen, bs, d]
@@ -187,11 +193,9 @@ class MDM(nn.Module):
         output = self.output_process(output)  # [bs, njoints, nfeats, nframes]
         return output
 
-
     def _apply(self, fn):
         super()._apply(fn)
         self.rot2xyz.smpl_model._apply(fn)
-
 
     def train(self, *args, **kwargs):
         super().train(*args, **kwargs)
@@ -199,6 +203,7 @@ class MDM(nn.Module):
 
 
 class PositionalEncoding(nn.Module):
+
     def __init__(self, d_model, dropout=0.1, max_len=5000):
         super(PositionalEncoding, self).__init__()
         self.dropout = nn.Dropout(p=dropout)
@@ -206,6 +211,7 @@ class PositionalEncoding(nn.Module):
         pe = torch.zeros(max_len, d_model)
         position = torch.arange(0, max_len, dtype=torch.float).unsqueeze(1)
         div_term = torch.exp(torch.arange(0, d_model, 2).float() * (-np.log(10000.0) / d_model))
+        
         pe[:, 0::2] = torch.sin(position * div_term)
         pe[:, 1::2] = torch.cos(position * div_term)
         pe = pe.unsqueeze(0).transpose(0, 1)
@@ -219,6 +225,7 @@ class PositionalEncoding(nn.Module):
 
 
 class TimestepEmbedder(nn.Module):
+
     def __init__(self, latent_dim, sequence_pos_encoder):
         super().__init__()
         self.latent_dim = latent_dim
@@ -236,6 +243,7 @@ class TimestepEmbedder(nn.Module):
 
 
 class InputProcess(nn.Module):
+
     def __init__(self, data_rep, input_feats, latent_dim):
         super().__init__()
         self.data_rep = data_rep
@@ -263,6 +271,7 @@ class InputProcess(nn.Module):
 
 
 class OutputProcess(nn.Module):
+
     def __init__(self, data_rep, input_feats, latent_dim, njoints, nfeats):
         super().__init__()
         self.data_rep = data_rep
@@ -276,22 +285,27 @@ class OutputProcess(nn.Module):
 
     def forward(self, output):
         nframes, bs, d = output.shape
+
         if self.data_rep in ['rot6d', 'xyz', 'hml_vec']:
             output = self.poseFinal(output)  # [seqlen, bs, 150]
+
         elif self.data_rep == 'rot_vel':
             first_pose = output[[0]]  # [1, bs, d]
             first_pose = self.poseFinal(first_pose)  # [1, bs, 150]
             vel = output[1:]  # [seqlen-1, bs, d]
             vel = self.velFinal(vel)  # [seqlen-1, bs, 150]
             output = torch.cat((first_pose, vel), axis=0)  # [seqlen, bs, 150]
+
         else:
             raise ValueError
+
         output = output.reshape(nframes, bs, self.njoints, self.nfeats)
         output = output.permute(1, 2, 3, 0)  # [bs, njoints, nfeats, nframes]
         return output
 
 
 class EmbedAction(nn.Module):
+    
     def __init__(self, num_actions, latent_dim):
         super().__init__()
         self.action_embedding = nn.Parameter(torch.randn(num_actions, latent_dim))

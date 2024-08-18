@@ -1,6 +1,8 @@
+from os.path import join as pjoin
+
 import numpy as np
 import pickle
-from os.path import join as pjoin
+
 
 POS_enumerator = {
     'VERB': 0,
@@ -20,19 +22,22 @@ POS_enumerator = {
     'OTHER': 14,
 }
 
-Loc_list = ('left', 'right', 'clockwise', 'counterclockwise', 'anticlockwise', 'forward', 'back', 'backward',
-            'up', 'down', 'straight', 'curve')
+Loc_list = (
+    'left', 'right', 
+    'clockwise', 'counterclockwise', 'anticlockwise', 
+    'forward', 'back', 'backward',
+    'up', 'down', 
+    'straight', 'curve',
+)
 
 Body_list = ('arm', 'chin', 'foot', 'feet', 'face', 'hand', 'mouth', 'leg', 'waist', 'eye', 'knee', 'shoulder', 'thigh')
-
 Obj_List = ('stair', 'dumbbell', 'chair', 'window', 'floor', 'car', 'ball', 'handrail', 'baseball', 'basketball')
-
 Act_list = ('walk', 'run', 'swing', 'pick', 'bring', 'kick', 'put', 'squat', 'throw', 'hop', 'dance', 'jump', 'turn',
             'stumble', 'dance', 'stop', 'sit', 'lift', 'lower', 'raise', 'wash', 'stand', 'kneel', 'stroll',
-            'rub', 'bend', 'balance', 'flap', 'jog', 'shuffle', 'lean', 'rotate', 'spin', 'spread', 'climb')
-
-Desc_list = ('slowly', 'carefully', 'fast', 'careful', 'slow', 'quickly', 'happy', 'angry', 'sad', 'happily',
-             'angrily', 'sadly')
+            'rub', 'bend', 'balance', 'flap', 'jog', 'shuffle', 'lean', 'rotate', 'spin', 'spread', 'climb',)
+Desc_list = ('slowly', 'carefully', 
+             'fast', 'careful', 'slow', 'quickly', 
+             'happy', 'angry', 'sad', 'happily', 'angrily', 'sadly')
 
 VIP_dict = {
     'Loc_VIP': Loc_list,
@@ -44,10 +49,11 @@ VIP_dict = {
 
 
 class WordVectorizer(object):
+
     def __init__(self, meta_root, prefix):
-        vectors = np.load(pjoin(meta_root, '%s_data.npy'%prefix))
-        words = pickle.load(open(pjoin(meta_root, '%s_words.pkl'%prefix), 'rb'))
-        word2idx = pickle.load(open(pjoin(meta_root, '%s_idx.pkl'%prefix), 'rb'))
+        vectors = np.load(pjoin(meta_root, '%s_data.npy' % prefix))
+        words = pickle.load(open(pjoin(meta_root, '%s_words.pkl' % prefix), 'rb'))
+        word2idx = pickle.load(open(pjoin(meta_root, '%s_idx.pkl' % prefix), 'rb'))
         self.word2vec = {w: vectors[word2idx[w]] for w in words}
 
     def _get_pos_ohot(self, pos):

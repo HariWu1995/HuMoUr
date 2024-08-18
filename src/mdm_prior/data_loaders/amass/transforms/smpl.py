@@ -13,36 +13,42 @@
 # for Intelligent Systems. All rights reserved.
 #
 # Contact: ps-license@tuebingen.mpg.de
+import os
 import time
 from typing import Optional
 from torch import Tensor
 import smplx
 
 from .base import Datastruct, dataclass, Transform
-
 from .rots2rfeats import Rots2Rfeats, Globalvelandy
 from .rots2joints import Rots2Joints, SMPLH
 from .joints2jfeats import Joints2Jfeats
 
+
+SMPL_DATA_ROOT = os.environ.get('SMPL_DATA_ROOT', './body_models/smpl_models')
+
+
 class SMPLTransform(Transform):
+
     def __init__(self, batch_size=16, rots2rfeats: Rots2Rfeats = None,
                  rots2joints: Rots2Joints = None,
-                 joints2jfeats: Joints2Jfeats = None,
-                 **kwargs):
+                 joints2jfeats: Joints2Jfeats = None, **kwargs):
+
         if rots2rfeats == None:
             rots2rfeats = Globalvelandy(path='./data_loaders/amass/transforms/rots2rfeats/globalvelandy/rot6d/babel-amass/separate_pairs',
-                                                                normalization=True,
-                                                                pose_rep='rot6d',
-                                                                canonicalize=True,
-                                                                offset=True,
-                                                                name='Globalvelandy')
+                                        normalization=True,
+                                        pose_rep='rot6d',
+                                        canonicalize=True,
+                                        offset=True,
+                                        name='Globalvelandy')
         if rots2joints == None:
-            rots2joints = SMPLH(path='./body_models/smpl_models/smplh',
-                    jointstype='smplnh',
-                    input_pose_rep='matrix',
-                    batch_size=batch_size,
-                    gender='male',
-                    name='SMPLH')
+            rots2joints = SMPLH(path=f'{SMPL_DATA_ROOT}/smplh',
+                                jointstype='smplnh',
+                                input_pose_rep='matrix',
+                                batch_size=batch_size,
+                                gender='male',
+                                name='SMPLH')
+
         if joints2jfeats == None:
             joints2jfeats = None # FIXME : prob not it use
 
@@ -54,45 +60,46 @@ class SMPLTransform(Transform):
         return SMPLDatastruct(_rots2rfeats=self.rots2rfeats,
                               _rots2joints=self.rots2joints,
                               _joints2jfeats=self.joints2jfeats,
-                              transforms=self,
-                              **kwargs)
+                                  transforms=self, **kwargs)
 
     def __repr__(self):
         return "SMPLTransform()"
 
+
 class SlimSMPLTransform(Transform):
+
     def __init__(self, batch_size=16, rots2rfeats: Rots2Rfeats = None,
                  rots2joints: Rots2Joints = None,
                  **kwargs):
         if rots2rfeats == None:
             rots2rfeats = Globalvelandy(path='./data_loaders/amass/transforms/rots2rfeats/globalvelandy/rot6d/babel-amass/separate_pairs',
-                                                                normalization=True,
-                                                                pose_rep='rot6d',
-                                                                canonicalize=kwargs.get("canonicalize", True),
-                                                                offset=True,
-                                                                name='Globalvelandy')
+                                        normalization=True,
+                                        pose_rep='rot6d',
+                                        canonicalize=kwargs.get("canonicalize", True),
+                                        offset=True,
+                                        name='Globalvelandy')
         if rots2joints == None:
-            rots2joints = SMPLH(path='./body_models/smpl_models/smplh',
-                    jointstype='smplnh',
-                    input_pose_rep='matrix',
-                    batch_size=batch_size,
-                    gender='male',
-                    name='SMPLH')
+            rots2joints = SMPLH(path=f'{SMPL_DATA_ROOT}/smplh',
+                                jointstype='smplnh',
+                                input_pose_rep='matrix',
+                                batch_size=batch_size,
+                                gender='male',
+                                name='SMPLH')
 
         self.rots2rfeats = rots2rfeats
         self.rots2joints = rots2joints
 
     def SlimDatastruct(self, **kwargs):
         return SlimSMPLDatastruct(_rots2rfeats=self.rots2rfeats,
-                              _rots2joints=self.rots2joints,
-                              transforms=self,
-                              **kwargs)
+                                  _rots2joints=self.rots2joints,
+                                    transforms=self, **kwargs)
 
     def __repr__(self):
         return "SlimSMPLTransform()"
 
 
 class RotIdentityTransform(Transform):
+
     def __init__(self, **kwargs):
         return
 
@@ -105,9 +112,9 @@ class RotIdentityTransform(Transform):
 
 @dataclass
 class RotTransDatastruct(Datastruct):
+
     rots: Tensor
     trans: Tensor
-
     transforms: RotIdentityTransform = RotIdentityTransform()
 
     def __post_init__(self):
@@ -119,16 +126,17 @@ class RotTransDatastruct(Datastruct):
 
 @dataclass
 class SMPLDatastruct(Datastruct):
+
     transforms: SMPLTransform
     _rots2rfeats: Rots2Rfeats
     _rots2joints: Rots2Joints
     _joints2jfeats: Joints2Jfeats
 
-    features: Optional[Tensor] = None
     rots_: Optional[RotTransDatastruct] = None
     rfeats_: Optional[Tensor] = None
     joints_: Optional[Tensor] = None
     jfeats_: Optional[Tensor] = None
+    features: Optional[Tensor] = None
     vertices_: Optional[Tensor] = None
 
     def __post_init__(self):
@@ -200,14 +208,15 @@ class SMPLDatastruct(Datastruct):
 
 @dataclass
 class SlimSMPLDatastruct(Datastruct):
+
     transforms: SlimSMPLTransform
     _rots2rfeats: Rots2Rfeats
     _rots2joints: Rots2Joints
 
     features: Optional[Tensor] = None
-    rots_: Optional[RotTransDatastruct] = None
     rfeats_: Optional[Tensor] = None
     joints_: Optional[Tensor] = None
+    rots_: Optional[RotTransDatastruct] = None
 
     def __post_init__(self):
         self.datakeys = ['features', 'rots_', 'joints_', 'rfeats_']
@@ -261,17 +270,17 @@ class SlimSMPLDatastruct(Datastruct):
     #     # Cached value
     #     if self.jfeats_ is not None:
     #         return self.jfeats_
-    #
+
     #     self._joints2jfeats.to(self.joints.device)
     #     self.jfeats_ = self._joints2jfeats(self.joints)
     #     return self.jfeats_
-    #
+
     # @property
     # def vertices(self):
     #     # Cached value
     #     if self.vertices_ is not None:
     #         return self.vertices_
-    #
+
     #     self._rots2joints.to(self.rots.device)
     #     self.vertices_ = self._rots2joints(self.rots, jointstype="vertices")
     #     return self.vertices_
@@ -294,7 +303,7 @@ def get_body_model(model_type, gender, batch_size, device='cpu', ext='pkl'):
     else:
         gender = gender.upper()
         ext = 'npz'
-    body_model_path = f'body_models/smpl_models/{model_type}/{mtype}_{gender}.{ext}'
+    body_model_path = f'{SMPL_DATA_ROOT}/{model_type}/{mtype}_{gender}.{ext}'
 
     body_model = smplx.create(body_model_path, model_type=type,
                               gender=gender, ext=ext,

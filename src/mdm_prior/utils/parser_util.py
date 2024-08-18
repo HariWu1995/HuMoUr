@@ -1,8 +1,9 @@
-from argparse import ArgumentParser
-import argparse
-from copy import deepcopy
 import os
 import json
+from copy import deepcopy
+
+from argparse import ArgumentParser
+import argparse
 
 
 def parse_and_load_from_model(parser, **kwargs):
@@ -14,6 +15,7 @@ def parse_and_load_from_model(parser, **kwargs):
     args = parser.parse_args()
     return load_from_model(args, parser, **kwargs)
 
+
 def get_model_path_from_args():
     try:
         dummy_parser = ArgumentParser()
@@ -23,8 +25,10 @@ def get_model_path_from_args():
     except:
         raise ValueError('model_path argument must be specified.')
 
+
 def load_from_model(args, parser, task=''):
     args_to_overwrite = []
+
     loaded_groups = ['dataset', 'model', 'diffusion']
     if task in ['multi_sample', 'multi_train']:
         loaded_groups.append('multi_person')
@@ -50,6 +54,7 @@ def load_from_model(args, parser, task=''):
     if args.cond_mask_prob == 0:
         args.guidance_param = 1
     return args
+    
 
 def parse_and_load_from_multiple_models(parser, task=''):
     # args according to the loaded model
@@ -58,6 +63,7 @@ def parse_and_load_from_multiple_models(parser, task=''):
     add_model_options(parser)
     add_diffusion_options(parser)
     args = parser.parse_args()
+
     model_paths = args.model_path.split(',')
     args_list = []
     for i in range(len(model_paths)):
@@ -164,6 +170,7 @@ def add_training_options(parser):
     group.add_argument("--resume_checkpoint", default="", type=str,
                        help="If not empty, will start from the specified checkpoint (path to model###.pt file).")
 
+
 def add_multi_options(parser):
     group = parser.add_argument_group('multi_person')
     group.add_argument("--pretrained_path", default='./save/humanml_trans_enc_512/model000200000.pt', type=str,
@@ -181,6 +188,7 @@ def add_multi_options(parser):
     parser.add_argument('--no_6dof', dest='predict_6dof', action='store_false')
     parser.set_defaults(predict_6dof=True)
 
+
 def add_inpainting_options(parser):
     group = parser.add_argument_group('inpainting')
     group.add_argument("--inpainting_mask", default='', type=str, 
@@ -193,7 +201,6 @@ def add_inpainting_options(parser):
     group.add_argument("--no_filter_noise", action='store_false', dest='filter_noise',
                        help="When true, the noise will be filtered from the inpainted features.")
     parser.set_defaults(filter_noise=True)
-
 
 
 def add_sampling_options(parser):
@@ -277,6 +284,7 @@ def add_edit_inpainting_options(parser):
     group.add_argument("--show_input", action='store_true',
                        help="If true, will show the motion from which the inpainting features were taken.")
 
+
 def add_evaluation_options(parser):
     group = parser.add_argument_group('eval')
     group.add_argument("--model_path", required=True, type=str,
@@ -322,6 +330,7 @@ def train_args():
     add_frame_sampler_options(parser)
     return parser.parse_args()
 
+
 def train_multi_args():
     parser = ArgumentParser()
     # args specified by the user: (all other will be loaded from the model)
@@ -329,6 +338,7 @@ def train_multi_args():
     add_multi_options(parser)
     add_training_options(parser)
     return parse_and_load_from_model(parser, task='multi_train')
+
 
 def train_inpainting_args():
     parser = ArgumentParser()
@@ -340,6 +350,7 @@ def train_inpainting_args():
     add_inpainting_options(parser)
     return parser.parse_args()
 
+
 def generate_multi_args():
     parser = ArgumentParser()
     # args specified by the user: (all other will be loaded from the model)
@@ -348,6 +359,7 @@ def generate_multi_args():
     add_multi_options(parser)
     add_generate_options(parser)
     return parse_and_load_from_model(parser, task='multi_sample')
+
 
 def generate_args():
     parser = ArgumentParser()
@@ -426,6 +438,7 @@ def evaluation_multi_parser():
     add_evaluation_options(parser)
     return parse_and_load_from_model(parser, task='multi_sample')
 
+
 def evaluation_inpainting_parser():
     parser = ArgumentParser()
     # args specified by the user: (all other will be loaded from the model)
@@ -434,7 +447,9 @@ def evaluation_inpainting_parser():
     add_inpainting_options(parser)
     return parse_and_load_from_multiple_models(parser, task='inpainting')
 
+
 def smplh_args():
     parser = ArgumentParser()
     add_base_options(parser)
     return parse_and_load_from_model(parser)
+

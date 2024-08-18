@@ -1,6 +1,7 @@
-from data_loaders.humanml.networks.modules import *
-from data_loaders.humanml.utils.word_vectorizer import POS_enumerator
 from os.path import join as pjoin
+
+from src.mdm_prior.data_loaders.humanml.networks.modules import *
+from src.mdm_prior.data_loaders.humanml.utils.word_vectorizer import POS_enumerator
 
 
 def motion_wo_foot_contact(motion, foot_contact_entries):
@@ -25,9 +26,11 @@ def build_models(opt):
 
     checkpoint = torch.load(pjoin(opt.checkpoints_dir, opt.dataset_name, 'text_mot_match', 'model', 'finest.tar'),
                             map_location=opt.device)
+
     movement_enc.load_state_dict(checkpoint['movement_encoder'])
     text_enc.load_state_dict(checkpoint['text_encoder'])
     motion_enc.load_state_dict(checkpoint['motion_encoder'])
+
     print('Loading Evaluation Model Wrapper (Epoch %d) Completed!!' % (checkpoint['epoch']))
     return text_enc, motion_enc, movement_enc
 
@@ -99,6 +102,7 @@ class EvaluatorModelWrapper(object):
             motion_embedding = self.motion_encoder(movements, m_lens)
         return motion_embedding
 
+
 # our version
 def build_evaluators(opt):
     movement_enc = MovementConvEncoder(opt['dim_pose']-opt['foot_contact_entries'], opt['dim_movement_enc_hidden'], opt['dim_movement_latent'])
@@ -125,11 +129,14 @@ def build_evaluators(opt):
 
     checkpoint = torch.load(pjoin(opt['checkpoints_dir'], ckpt_dir, model_name, 'model', 'finest.tar'),
                             map_location=opt['device'])
+
     movement_enc.load_state_dict(checkpoint['movement_encoder'])
     text_enc.load_state_dict(checkpoint['text_encoder'])
     motion_enc.load_state_dict(checkpoint['motion_encoder'])
+
     print('Loading Evaluation Model Wrapper (Epoch %d) Completed!!' % (checkpoint['epoch']))
     return text_enc, motion_enc, movement_enc
+
 
 # our wrapper
 class EvaluatorMDMWrapper(object):
@@ -203,4 +210,5 @@ class EvaluatorMDMWrapper(object):
             movements = self.movement_encoder(motion_wo_foot_contact(motions, self.opt['foot_contact_entries'])).detach()
             m_lens = m_lens // self.opt['unit_length']
             motion_embedding = self.motion_encoder(movements, m_lens)
+            
         return motion_embedding

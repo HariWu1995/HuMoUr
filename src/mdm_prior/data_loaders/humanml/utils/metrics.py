@@ -19,6 +19,7 @@ def euclidean_distance_matrix(matrix1, matrix2):
     dists = np.sqrt(d1 + d2 + d3)  # broadcasting
     return dists
 
+
 def calculate_top_k(mat, top_k):
     size = mat.shape[0]
     gt_mat = np.expand_dims(np.arange(size), 1).repeat(size, 1)
@@ -26,7 +27,7 @@ def calculate_top_k(mat, top_k):
     correct_vec = False
     top_k_list = []
     for i in range(top_k):
-#         print(correct_vec, bool_mat[:, i])
+        # print(correct_vec, bool_mat[:, i])
         correct_vec = (correct_vec | bool_mat[:, i])
         # print(correct_vec)
         top_k_list.append(correct_vec[:, None])
@@ -56,11 +57,11 @@ def calculate_matching_score(embedding1, embedding2, sum_all=False):
         return dist
 
 
-
 def calculate_activation_statistics(activations):
     """
     Params:
     -- activation: num_samples x dim_feat
+
     Returns:
     -- mu: dim_feat
     -- sigma: dim_feat x dim_feat
@@ -93,11 +94,15 @@ def calculate_multimodality(activation, multimodality_times):
 
 
 def calculate_frechet_distance(mu1, sigma1, mu2, sigma2, eps=1e-6):
-    """Numpy implementation of the Frechet Distance.
-    The Frechet distance between two multivariate Gaussians X_1 ~ N(mu_1, C_1)
-    and X_2 ~ N(mu_2, C_2) is
-            d^2 = ||mu_1 - mu_2||^2 + Tr(C_1 + C_2 - 2*sqrt(C_1*C_2)).
+    """
+    Numpy implementation of the Frechet Distance.
+    The Frechet distance between two multivariate Gaussians 
+            X_1 ~ N(mu_1, C_1)
+        and X_2 ~ N(mu_2, C_2) 
+    is d^2 = ||mu_1 - mu_2||^2 + Tr(C_1 + C_2 - 2*sqrt(C_1*C_2)).
+    
     Stable version by Dougal J. Sutherland.
+    
     Params:
     -- mu1   : Numpy array containing the activations of a layer of the
                inception net (like returned by the function 'get_predictions')
@@ -107,10 +112,10 @@ def calculate_frechet_distance(mu1, sigma1, mu2, sigma2, eps=1e-6):
     -- sigma1: The covariance matrix over activations for generated samples.
     -- sigma2: The covariance matrix over activations, precalculated on an
                representative dataset set.
+
     Returns:
     --   : The Frechet Distance.
     """
-
     mu1 = np.atleast_1d(mu1)
     mu2 = np.atleast_1d(mu2)
 
@@ -142,5 +147,6 @@ def calculate_frechet_distance(mu1, sigma1, mu2, sigma2, eps=1e-6):
 
     tr_covmean = np.trace(covmean)
 
-    return (diff.dot(diff) + np.trace(sigma1) +
-            np.trace(sigma2) - 2 * tr_covmean)
+    return (
+        diff.dot(diff) + np.trace(sigma1) + np.trace(sigma2) - 2 * tr_covmean
+    )

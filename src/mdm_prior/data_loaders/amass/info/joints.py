@@ -51,23 +51,24 @@ mmm_kinematic_tree = [[0, 1, 2, 3, 4], [3, 5, 6, 7], [3, 8, 9, 10],
 
 smplh_to_mmm_scaling_factor = 480 / 0.75
 mmm_to_smplh_scaling_factor = 0.75 / 480
-mmm_joints = ["root", "BP", "BT", "BLN", "BUN", "LS", "LE", "LW", "RS", "RE", "RW", "LH",
-              "LK", "LA", "LMrot", "LF", "RH", "RK", "RA", "RMrot", "RF"]
+mmm_joints = [
+    "root", "BP", "BT", "BLN", "BUN", "LS", "LE", "LW", "RS", "RE", "RW", "LH",
+    "LK", "LA", "LMrot", "LF", "RH", "RK", "RA", "RMrot", "RF",
+]
 
-
-
-smplnh_joints = ["pelvis", "left_hip", "right_hip", "spine1", "left_knee",
-                 "right_knee", "spine2", "left_ankle", "right_ankle", "spine3",
-                 "left_foot", "right_foot", "neck", "left_collar", "right_collar",
-                 "head", "left_shoulder", "right_shoulder", "left_elbow", "right_elbow",
-                 "left_wrist", "right_wrist"]
+smplnh_joints = [
+    "pelvis", "left_hip", "right_hip", "spine1", "left_knee",
+    "right_knee", "spine2", "left_ankle", "right_ankle", "spine3",
+    "left_foot", "right_foot", "neck", "left_collar", "right_collar",
+    "head", "left_shoulder", "right_shoulder", "left_elbow", "right_elbow",
+    "left_wrist", "right_wrist",
+]
 
 hml_joints = [
     'pelvis', 'left_hip', 'right_hip', 'spine1', 'left_knee', 'right_knee', 'spine2', 'left_ankle', 'right_ankle',
     'spine3', 'left_foot', 'right_foot', 'neck', 'left_collar', 'right_collar',
     'head', 'left_shoulder', 'right_shoulder', 'left_elbow', 'right_elbow', 'left_wrist', 'right_wrist',
 ]
-
 
 smplnh2smplh_correspondence = {key: key for key in smplnh_joints}
 smplh2smplnh_correspondence = {val: key for key, val in smplnh2smplh_correspondence.items()}
@@ -77,33 +78,44 @@ smplh2smplnh_indexes = [smplh_joints.index(smplnh2smplh_correspondence[x]) for x
 smplh_to_mmm_scaling_factor = 480 / 0.75
 mmm_to_smplh_scaling_factor = 0.75 / 480
 
-mmm_joints_info = {"root": mmm_joints.index("root"),
-                   "feet": [mmm_joints.index("LMrot"), mmm_joints.index("RMrot"),
-                            mmm_joints.index("LF"), mmm_joints.index("RF")],
-                   "shoulders": [mmm_joints.index("LS"), mmm_joints.index("RS")],
-                   "hips": [mmm_joints.index("LH"), mmm_joints.index("RH")]}
-
-smplnh_joints_info = {"root": smplnh_joints.index("pelvis"),
-                      "feet": [smplnh_joints.index("left_ankle"), smplnh_joints.index("right_ankle"),
-                               smplnh_joints.index("left_foot"), smplnh_joints.index("right_foot")],
-                      "shoulders": [smplnh_joints.index("left_shoulder"), smplnh_joints.index("right_shoulder")],
-                      "hips": [smplnh_joints.index("left_hip"), smplnh_joints.index("right_hip")]}
-
-
-infos = {"mmm": mmm_joints_info,
-         "smplnh": smplnh_joints_info
+mmm_joints_info = {
+        "root":  mmm_joints.index("root"),
+        "feet": [mmm_joints.index("LMrot"), mmm_joints.index("RMrot"),
+                 mmm_joints.index("LF")   , mmm_joints.index("RF")  ],
+   "shoulders": [mmm_joints.index("LS")   , mmm_joints.index("RS")  ],
+        "hips": [mmm_joints.index("LH")   , mmm_joints.index("RH")  ],
 }
 
-smplh_indexes = {"mmm": smplh2mmm_indexes,
-                 "smplnh": smplh2smplnh_indexes}
+smplnh_joints_info = {
+    "root":  smplnh_joints.index("pelvis"),
+    "feet": [smplnh_joints.index("left_ankle"), smplnh_joints.index("right_ankle"),
+             smplnh_joints.index("left_foot"), smplnh_joints.index("right_foot")],
+    "shoulders": [smplnh_joints.index("left_shoulder"), 
+                  smplnh_joints.index("right_shoulder")],
+    "hips": [smplnh_joints.index("left_hip"), 
+             smplnh_joints.index("right_hip")],
+}
 
 
-root_joints = {"mmm": mmm_joints_info["root"],
-               "mmmns": mmm_joints_info["root"],
-               "smplmmm": mmm_joints_info["root"],
-               "smplnh": smplnh_joints_info["root"],
-               "smplh": smplh_joints.index("pelvis")
-               }
+infos = {
+       "mmm":    mmm_joints_info,
+    "smplnh": smplnh_joints_info,
+}
+
+smplh_indexes = {
+       "mmm": smplh2mmm_indexes,
+    "smplnh": smplh2smplnh_indexes,
+}
+
+
+root_joints = {
+        "mmm":    mmm_joints_info["root"],
+      "mmmns":    mmm_joints_info["root"],
+    "smplmmm":    mmm_joints_info["root"],
+    "smplnh" : smplnh_joints_info["root"],
+    "smplh"  :  smplh_joints.index("pelvis"),
+}
+
 
 def get_root_idx(joinstype):
     return root_joints[joinstype]

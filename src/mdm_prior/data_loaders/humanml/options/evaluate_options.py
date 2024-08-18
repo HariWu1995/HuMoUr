@@ -1,13 +1,14 @@
-from options.base_options import BaseOptions
+from src.mdm_prior.data_loaders.humanml.options.base_options import BaseOptions
 
 
 class TestOptions(BaseOptions):
+
     def initialize(self):
+
         BaseOptions.initialize(self)
         self.parser.add_argument('--batch_size', type=int, default=1, help='Batch size')
         self.parser.add_argument('--start_mov_len', type=int, default=10)
         self.parser.add_argument('--est_length', action="store_true", help="Whether to use sampled motion length")
-
 
         self.parser.add_argument('--repeat_times', type=int, default=3, help="Number of generation rounds for each text description")
         self.parser.add_argument('--split_file', type=str, default='test.txt')

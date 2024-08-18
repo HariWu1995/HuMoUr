@@ -1,13 +1,16 @@
 import math
 import numpy as np
+
 import matplotlib
 import matplotlib.pyplot as plt
+import mpl_toolkits.mplot3d.axes3d as p3
 from mpl_toolkits.mplot3d import Axes3D
 from matplotlib.animation import FuncAnimation, FFMpegFileWriter
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
-import mpl_toolkits.mplot3d.axes3d as p3
+
 from textwrap import wrap
-from data_loaders import humanml_utils
+
+from src.mdm_prior.data_loaders import humanml_utils
 
 
 MAX_LINE_LENGTH = 20
@@ -27,19 +30,24 @@ def list_cut_average(ll, intervals):
     return ll_new
 
 
-def plot_3d_motion(save_path, kinematic_tree, joints, title, dataset, figsize=(3, 3), fps=120, radius=3,
-                   vis_mode='default', gt_frames=[], handshake_size=0, blend_size=0, step_sizes=[], lengths = [], joints2=None, painting_features=[]):
-    matplotlib.use('Agg')
+def plot_3d_motion(save_path, kinematic_tree, joints, title, dataset, 
+                   figsize=(3, 3), fps=120, radius=3,
+                   vis_mode='default', gt_frames=[], handshake_size=0, blend_size=0, step_sizes=[], 
+                   lengths = [], joints2=None, painting_features=[]):
     """
     A wrapper around explicit_plot_3d_motion that 
     uses gt_frames to determine the colors of the frames
     """
+    matplotlib.use('Agg')
+    
     data = joints.copy().reshape(len(joints), -1, 3)
     frames_number = data.shape[0]
+
     frame_colors = ['blue' if index in gt_frames else 'orange' for index in range(frames_number)]
     if vis_mode == 'unfold':
         frame_colors = ['purple'] *handshake_size + ['blue']*blend_size + ['orange'] *(120-handshake_size*2-blend_size*2) +['orange']*blend_size
         frame_colors = ['orange'] *(120-handshake_size-blend_size) + ['orange']*blend_size + frame_colors*1024
+    
     elif vis_mode == 'unfold_arb_len':
         for ii, step_size in enumerate(step_sizes):
             if ii == 0:
@@ -51,10 +59,11 @@ def plot_3d_motion(save_path, kinematic_tree, joints, title, dataset, figsize=(3
             frame_colors += ['purple'] * (handshake_size // 2) + ['orange'] * blend_size + ['orange'] * (
                             lengths[ii] - 2 * handshake_size - 2 * blend_size) + ['orange'] * blend_size + \
                             ['purple'] * (handshake_size // 2)
+    
     elif vis_mode == 'gt':
         frame_colors = ['blue'] * frames_number
+    
     explicit_plot_3d_motion(save_path, kinematic_tree, joints, title, dataset, figsize=figsize, fps=fps, radius=radius, vis_mode=vis_mode, frame_colors=frame_colors, joints2=joints2, painting_features=painting_features)
-
 
 
 def explicit_plot_3d_motion(save_path, kinematic_tree, joints, title, dataset, figsize=(3, 3), fps=120, radius=3, vis_mode="default", frame_colors=[], joints2=None, painting_features=[]):
@@ -82,8 +91,7 @@ def explicit_plot_3d_motion(save_path, kinematic_tree, joints, title, dataset, f
         xz_plane = Poly3DCollection([verts])
         xz_plane.set_facecolor((0.5, 0.5, 0.5, 0.5))
         ax.add_collection3d(xz_plane)
-
-    #         return ax
+        # return ax
 
     # (seq_len, joints_num, 3)
     data = joints.copy().reshape(len(joints), -1, 3)
@@ -105,28 +113,34 @@ def explicit_plot_3d_motion(save_path, kinematic_tree, joints, title, dataset, f
     elif dataset =='babel':
         data *= 1.3
 
-
     fig = plt.figure(figsize=figsize)
     plt.tight_layout()
     ax = p3.Axes3D(fig)
     init()
+
     MINS = data.min(axis=0).min(axis=0)
     MAXS = data.max(axis=0).max(axis=0)
     if data2 is not None:
         MINS = np.concatenate((data, data2)).min(axis=0).min(axis=0)
         MAXS = np.concatenate((data, data2)).max(axis=0).max(axis=0)
+
     colors_blue = ["#4D84AA", "#5B9965", "#61CEB9", "#34C1E2", "#80B79A"]  # GT color
     colors_orange = ["#DD5A37", "#D69E00", "#B75A39", "#FF6D00", "#DDB50E"]  # Generation color
     colors_purple = ["#6B31DB", "#AD40A8", "#AF2B79", "#9B00FF", "#D836C1"]
 
     colors_upper_body = colors_blue[:2] + colors_orange[2:]
-
-    colors_dict = {"blue": colors_blue, "orange": colors_orange, "purple": colors_purple, "upper_body": colors_upper_body}
+    colors_dict = {
+        "blue": colors_blue, 
+        "orange": colors_orange, 
+        "purple": colors_purple, 
+        "upper_body": colors_upper_body,
+    }
 
     colors = colors_orange
     if vis_mode == 'upper_body':  # lower body taken fixed to input motion
         colors[0] = colors_blue[0]
         colors[1] = colors_blue[1]
+
     elif vis_mode == 'gt':
         colors = colors_blue
 
@@ -145,7 +159,6 @@ def explicit_plot_3d_motion(save_path, kinematic_tree, joints, title, dataset, f
     data[..., 0] -= data[:, 0:1, 0]
     data[..., 2] -= data[:, 0:1, 2]
 
-
     def update(index):
         ax.lines = []
         ax.collections = []
@@ -153,8 +166,8 @@ def explicit_plot_3d_motion(save_path, kinematic_tree, joints, title, dataset, f
         ax.dist = 7.5
         if len(title) > 1:
             fig.suptitle(title[index], fontsize=10)
-        plot_xzPlane(MINS[0] - trajec[index, 0], MAXS[0] - trajec[index, 0], 0, MINS[2] - trajec[index, 2], MAXS[2] - trajec[index, 2])
 
+        plot_xzPlane(MINS[0] - trajec[index, 0], MAXS[0] - trajec[index, 0], 0, MINS[2] - trajec[index, 2], MAXS[2] - trajec[index, 2])
 
         used_colors = colors_dict[frame_colors[index]] if (index < len(frame_colors)) else colors_dict["blue"]
         other_colors = used_colors  # colors_purple
@@ -168,12 +181,10 @@ def explicit_plot_3d_motion(save_path, kinematic_tree, joints, title, dataset, f
                 ax.plot3D(data2[index, chain, 0], data2[index, chain, 1], data2[index, chain, 2], linewidth=linewidth, color=other_color)
         
         def plot_root_horizontal():
-            ax.plot3D(trajec[:index, 0] - trajec[index, 0], np.zeros_like(trajec[:index, 1]), trajec[:index, 2] - trajec[index, 2], linewidth=2.0,
-                      color=used_colors[0])
+            ax.plot3D(trajec[:index, 0] - trajec[index, 0], np.zeros_like(trajec[:index, 1]), trajec[:index, 2] - trajec[index, 2], linewidth=2., color=used_colors[0])
         
         def plot_root():
-            ax.plot3D(trajec[:index, 0] - trajec[index, 0], trajec[:index, 1], trajec[:index, 2] - trajec[index, 2], linewidth=2.0,
-                      color=used_colors[0])
+            ax.plot3D(trajec[:index, 0] - trajec[index, 0], trajec[:index, 1], trajec[:index, 2] - trajec[index, 2], linewidth=2., color=used_colors[0])
         
         def plot_feature(feature):
             # trajectory = Line3DCollection(joints[:,0])
@@ -181,13 +192,14 @@ def explicit_plot_3d_motion(save_path, kinematic_tree, joints, title, dataset, f
                 feat_index = humanml_utils.HML_JOINT_NAMES.index(feature)
                 ax.plot3D(data[:index+1, feat_index, 0] + (trajec[:index+1, 0] - trajec[index, 0]),
                           data[:index+1, feat_index, 1],
-                          data[:index+1, feat_index, 2] + (trajec[:index+1, 2] - trajec[index, 2]), linewidth=2.0,
-                        color=used_colors[0])
+                          data[:index+1, feat_index, 2] + (trajec[:index+1, 2] - trajec[index, 2]), linewidth=2., color=used_colors[0])
         
         if 'root_horizontal' in painting_features:
             plot_root_horizontal()
+
         if 'root' in painting_features:
             plot_root()
+
         for feat in painting_features:
             plot_feature(feat)
             
@@ -197,7 +209,5 @@ def explicit_plot_3d_motion(save_path, kinematic_tree, joints, title, dataset, f
         ax.set_zticklabels([])
 
     ani = FuncAnimation(fig, update, frames=frame_number, interval=1000 // fps, repeat=False)
-
     ani.save(save_path, fps=fps)
-
     plt.close()

@@ -1,7 +1,10 @@
-from data_loaders.humanml.common.quaternion import *
 import scipy.ndimage.filters as filters
 
+from src.mdm_prior.data_loaders.humanml.common.quaternion import *
+
+
 class Skeleton(object):
+
     def __init__(self, offset, kinematic_tree, device):
         self.device = device
         self._raw_offset_np = offset.numpy()
@@ -54,6 +57,7 @@ class Skeleton(object):
     # joints (batch_size, joints_num, 3)
     def inverse_kinematics_np(self, joints, face_joint_idx, smooth_forward=False):
         assert len(face_joint_idx) == 4
+
         '''Get Forward Direction'''
         l_hip, r_hip, sdr_r, sdr_l = face_joint_idx
         across1 = joints[:, r_hip] - joints[:, l_hip]
@@ -81,6 +85,7 @@ class Skeleton(object):
         root_quat[0] = np.array([[1.0, 0.0, 0.0, 0.0]])
         quat_params[:, 0] = root_quat
         # quat_params[0, 0] = np.array([[1.0, 0.0, 0.0, 0.0]])
+
         for chain in self._kinematic_tree:
             R = root_quat
             for j in range(len(chain) - 1):
@@ -107,10 +112,13 @@ class Skeleton(object):
         # root_pos (batch_size, 3)
         if skel_joints is not None:
             offsets = self.get_offsets_joints_batch(skel_joints)
+
         if len(self._offset.shape) == 2:
             offsets = self._offset.expand(quat_params.shape[0], -1, -1)
+
         joints = torch.zeros(quat_params.shape[:-1] + (3,)).to(self.device)
         joints[:, 0] = root_pos
+
         for chain in self._kinematic_tree:
             if do_root_R:
                 R = quat_params[:, 0]
@@ -130,11 +138,14 @@ class Skeleton(object):
         if skel_joints is not None:
             skel_joints = torch.from_numpy(skel_joints)
             offsets = self.get_offsets_joints_batch(skel_joints)
+
         if len(self._offset.shape) == 2:
             offsets = self._offset.expand(quat_params.shape[0], -1, -1)
+
         offsets = offsets.numpy()
         joints = np.zeros(quat_params.shape[:-1] + (3,))
         joints[:, 0] = root_pos
+
         for chain in self._kinematic_tree:
             if do_root_R:
                 R = quat_params[:, 0]
@@ -153,11 +164,14 @@ class Skeleton(object):
         if skel_joints is not None:
             skel_joints = torch.from_numpy(skel_joints)
             offsets = self.get_offsets_joints_batch(skel_joints)
+
         if len(self._offset.shape) == 2:
             offsets = self._offset.expand(cont6d_params.shape[0], -1, -1)
+
         offsets = offsets.numpy()
         joints = np.zeros(cont6d_params.shape[:-1] + (3,))
         joints[:, 0] = root_pos
+
         for chain in self._kinematic_tree:
             if do_root_R:
                 matR = cont6d_to_matrix_np(cont6d_params[:, 0])
@@ -177,10 +191,13 @@ class Skeleton(object):
         if skel_joints is not None:
             # skel_joints = torch.from_numpy(skel_joints)
             offsets = self.get_offsets_joints_batch(skel_joints)
+
         if len(self._offset.shape) == 2:
             offsets = self._offset.expand(cont6d_params.shape[0], -1, -1)
+
         joints = torch.zeros(cont6d_params.shape[:-1] + (3,)).to(cont6d_params.device)
         joints[..., 0, :] = root_pos
+        
         for chain in self._kinematic_tree:
             if do_root_R:
                 matR = cont6d_to_matrix(cont6d_params[:, 0])

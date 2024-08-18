@@ -1,7 +1,8 @@
 import torch
 import torch.nn as nn
 
-from model.mdm import MDM
+from src.mdm_prior.model.mdm import MDM
+
 
 class ComMDM(MDM):
 
@@ -14,6 +15,7 @@ class ComMDM(MDM):
                          latent_dim, ff_size, num_layers, num_heads, dropout,
                          ablation, activation, legacy, data_rep, dataset, clip_dim,
                          arch, emb_trans_dec, clip_version, **kargs)
+
         self.is_multi = True
         self.args = args
 
@@ -59,9 +61,11 @@ class ComMDM(MDM):
 
         force_mask = y.get('uncond', False)
         force_no_com = y.get('no_com', False)  # FIXME - note that this feature not working for com_only - which is ok
+        
         if 'text' in self.cond_mode:
             enc_text = self.encode_text(y['text'])
             emb += self.embed_text(self.mask_cond(enc_text, force_mask=force_mask))
+        
         if 'action' in self.cond_mode:
             action_emb = self.embed_action(y['action'])
             emb += self.mask_cond(action_emb, force_mask=force_mask)
@@ -112,8 +116,8 @@ class ComMDM(MDM):
             p.requires_grad = False
 
 
-
 class MultiPersonBlock(nn.Module):
+
     def __init__(self, arch, fn_type, num_layers, latent_dim, input_feats, predict_6dof):
         super().__init__()
         self.arch = arch
@@ -126,13 +130,16 @@ class MultiPersonBlock(nn.Module):
         self.dropout = 0.1
         self.activation = 'gelu'
         self.input_feats = input_feats
+
         if self.predict_6dof:
             self.canon_agg = nn.Linear(4*2, self.latent_dim)
             # self.canon_agg = nn.Linear(self.input_feats*2, self.latent_dim)
             self.canon_out = nn.Linear(self.latent_dim, 4)
             # self.canon_out = nn.Linear(self.latent_dim, self.input_feats)
+
         if 'in_both' in self.fn_type:
             self.aggregation = nn.Linear(self.latent_dim*2, self.latent_dim)
+            
         if self.arch == 'trans_enc':
             seqTransEncoderLayer = nn.TransformerEncoderLayer(d_model=self.latent_dim,
                                                               nhead=self.num_heads,

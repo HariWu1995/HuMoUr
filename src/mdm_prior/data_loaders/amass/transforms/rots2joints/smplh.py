@@ -31,12 +31,14 @@ def slice_or_none(data, cslice):
 
 
 class SMPLH(Rots2Joints):
+
     def __init__(self, path: str = None,
                  jointstype: str = "smplnh",
                  input_pose_rep: str = "matrix",
                  batch_size: int = 16,
                  gender='male',
                  **kwargs) -> None:
+
         super().__init__(path=None, normalization=False)
         self.batch_size = batch_size
         self.input_pose_rep = input_pose_rep
@@ -158,10 +160,13 @@ def smplh_to(jointstype, data, trans):
         data = data[..., indexes, :]
         data = data[..., [0, 2, 1]]
         data[..., 2] = - data[..., 2]
+
     elif jointstype == "smplh":
         pass
+
     elif jointstype == "vertices":
         pass
+        
     else:
         raise NotImplementedError(f"SMPLH to {jointstype} is not implemented.")
 

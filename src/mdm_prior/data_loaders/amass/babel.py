@@ -13,44 +13,45 @@
 # for Intelligent Systems. All rights reserved.
 #
 # Contact: ps-license@tuebingen.mpg.de
-
-import json
-from operator import itemgetter
 import os
-from glob import glob
-from platform import architecture
-from re import A
-from typing import Dict, List, Optional, Tuple
 import logging
 import joblib
+import random
+
+import json
+from re import A
+from glob import glob
+from tqdm import tqdm
+from pathlib import Path
+from typing import Dict, List, Optional, Tuple
+from operator import itemgetter
+from platform import architecture
 
 import numpy as np
-import pandas
 import torch
 from torch import nn
 from torch.utils.data import Dataset
-from tqdm import tqdm
-from pathlib import Path
-import random
-
 
 from .file_io import read_json
 from .nlp_consts import fix_spell
 from .transforms import Transform
 
+
 logger = logging.getLogger(__name__)
 
 SPLITS = ["train", "val", "test", "all", "subset"]
-EXCLUDED_ACTIONS = ['t-pose', 'a-pose', 'a pose', 't pose',
-                    'tpose', 'apose', 'transition']
-EXCLUDED_ACTIONS_WO_TR = ['t-pose', 'a-pose', 'a pose', 't pose', 'tpose', 'apose']
+EXCLUDED_ACTIONS = ['t-pose','a-pose','a pose','t pose','tpose','apose','transition']
+EXCLUDED_ACTIONS_WO_TR = ['t-pose','a-pose','a pose','t pose','tpose','apose']
+
 
 import spacy
 nlp = spacy.load('en_core_web_sm')
+
 # Tokenizer according to https://github.com/EricGuo5513/HumanML3D/blob/main/text_process.py
 def process_text(sentence):
     sentence = sentence.replace('-', '')
     doc = nlp(sentence)
+
     word_list = []
     pos_list = []
     for token in doc:
@@ -62,6 +63,7 @@ def process_text(sentence):
         else:
             word_list.append(word)
         pos_list.append(token.pos_)
+
     return word_list, pos_list
 
 
@@ -84,9 +86,9 @@ def separate_actions(pair: Tuple[Tuple]):
             # a1 10, 15 t 14, 18 a2 17, 25
             # a1 10, 15 t 16, 16 a2 17, 25
             # transition only --> transition does not matter
-            final_pair = [(pair[0][0], pair[1][0]),
+            final_pair = [(pair[0][0]    , pair[1][0]    ),
                           (pair[1][0] + 1, pair[2][0] - 1),
-                          (pair[2][0], pair[2][1])]
+                          (pair[2][0]    , pair[2][1]    )]
         else:
             # overlap + transition --> transition does not matter
             over = pair[2][0] - pair[0][1]
@@ -125,8 +127,8 @@ def timeline_overlaps(arr1: Tuple, arr2: List[Tuple]) -> Tuple[List[Tuple], List
     inter_super = []
     inter_before = []
     inter_after = []
-    for s in arr2:
 
+    for s in arr2:
         if (s[0] > l and s[0] > r) or (s[1] < l and s[1] < r):
             continue
         if s[0] <= l and s[1] >= r:
@@ -145,6 +147,7 @@ def segments_sorted(segs_fr: List[List], acts: List) -> Tuple[List[List], List]:
     assert len(segs_fr) == len(acts)
     if len(segs_fr) == 1: return segs_fr, acts
     L = [(segs_fr[i], i) for i in range(len(segs_fr))]
+
     L.sort()
     sorted_segs_fr, permutation = zip(*L)
     sort_acts = [acts[i] for i in permutation]
@@ -156,6 +159,7 @@ def extract_frame_labels(babel_labels, fps, seqlen, datatype):
     seg_ids = []
     seg_acts = []
     is_valid = True
+
     babel_key = babel_labels['babel_sid']
     if datatype == 'seq' and babel_labels['frame_ann'] is not None:
         is_valid = False
@@ -168,11 +172,11 @@ def extract_frame_labels(babel_labels, fps, seqlen, datatype):
 
     if is_valid:
         if babel_labels['frame_ann'] is None:
-
             # 'transl' 'pose''betas'
             action_label = babel_labels['seq_ann']['labels'][0]['proc_label']
             seg_ids.append([0, seqlen])
             seg_acts.append(fix_spell(action_label))
+
         else:
             # Get segments
             for seg_an in babel_labels['frame_ann']['labels']:
@@ -182,10 +186,13 @@ def extract_frame_labels(babel_labels, fps, seqlen, datatype):
                 end_f = int(seg_an['end_t'] * fps)
                 if end_f > seqlen:
                     end_f = seqlen
+
                 seg_ids.append((st_f, end_f))
                 seg_acts.append(action_label)
+
             # Process segments
             assert len(seg_ids) == len(seg_acts)
+
             # TODO make this pairs and then a subconfig for pairs
             if datatype == 'pairs' or datatype == 'pairs_only' or datatype == 'separate_pairs':
                 import itertools
@@ -205,6 +212,7 @@ def extract_frame_labels(babel_labels, fps, seqlen, datatype):
                 for idx, segment in enumerate(seg_ids_for_pairs):
                     # remove the segment of interest
                     seg_ids_wo_seg = [x for x in seg_ids_for_pairs if x != segment]
+
                     # calculate the before and after overlaps for the segment of interest
                     ov_bef, ov_aft = timeline_overlaps(segment, seg_ids_wo_seg)
 
@@ -214,11 +222,13 @@ def extract_frame_labels(babel_labels, fps, seqlen, datatype):
 
                 pairs_s = []
                 pairs_a = []
+
                 for seg_, ov_seg in overlaps_for_each_seg.items():
                     cur_act_pairs = []
                     cur_seg_pairs = []
                     cur_seg_pairs_bef = []
                     cur_seg_pairs_af = []
+                    
                     if seg2act[seg_] == 'transition':
                         # if transition is not the start
                         if not seg_[0] == 0:
@@ -238,8 +248,10 @@ def extract_frame_labels(babel_labels, fps, seqlen, datatype):
                     else:
                         ov_seg['before'] = [x for x in ov_seg['before'] if seg2act[x] != 'transition']
                         ov_seg['after'] = [x for x in ov_seg['after'] if seg2act[x] != 'transition']
+                        
                         if ov_seg['before']:
                             cur_seg_pairs_bef = list(itertools.product(ov_seg['before'], [seg_]))
+                        
                         if ov_seg['after']:
                             cur_seg_pairs_af = list(itertools.product([seg_], ov_seg['after']))
 
@@ -261,7 +273,6 @@ def extract_frame_labels(babel_labels, fps, seqlen, datatype):
                             cur_act_pairs = [(seg2act[x], seg2act[y]) for x, y in cur_seg_pairs]
 
                         # separate_pairs
-                        # [((),())]
                         # list of tuples for everything except separate_pairs
                         pairs_s.append(cur_seg_pairs)
                         pairs_a.append(cur_act_pairs)
@@ -277,6 +288,7 @@ def extract_frame_labels(babel_labels, fps, seqlen, datatype):
                 uniq_tmp = unique_everseen(tmp, key=itemgetter(0))
                 segment_pairs = []
                 action_pairs = []
+
                 for seg, a in list(uniq_tmp):
                     segment_pairs.append(seg)
                     action_pairs.append(a)
@@ -285,9 +297,11 @@ def extract_frame_labels(babel_labels, fps, seqlen, datatype):
                 if not datatype == 'separate_pairs':
                     # conversion of actions to pair with comma
                     action_pairs = [f'{a1}, {a2}' for a1, a2 in action_pairs]
+
                 if datatype == 'pairs':
                     seg_ids.extend(segment_pairs)
                     seg_acts.extend(action_pairs)
+
                 elif datatype == 'pairs_only' or datatype == 'separate_pairs':
                     if segment_pairs:
                         is_valid = True
@@ -295,6 +309,7 @@ def extract_frame_labels(babel_labels, fps, seqlen, datatype):
                     else:
                         is_valid = False
                         return segment_pairs, action_pairs, is_valid
+
     return seg_ids, seg_acts, is_valid
 
 
@@ -304,14 +319,16 @@ def get_all_seq_durs(duration, max_len, min_len, crop_samples):
         dur1_t = dur1 + dur_tr if dur1 > min_len else None
         dur2_t = dur2 + dur_tr if dur2 > min_len else None
 
-        durations = {"dur1": dur1 if dur1 > min_len else None,
-                     "dur2": dur2 if dur2 > min_len else None,
-                     "dur1_t": dur1_t,
-                     "dur2_t": dur2_t,
-                     "bias_dur1": 0,
-                     "bias_dur2": 0,
-                     "bias_dur1_t": 0,
-                     "bias_dur2_t": 0}
+        durations = {
+            "dur1": dur1 if dur1 > min_len else None,
+            "dur2": dur2 if dur2 > min_len else None,
+            "dur1_t": dur1_t,
+            "dur2_t": dur2_t,
+            "bias_dur1": 0,
+            "bias_dur2": 0,
+            "bias_dur1_t": 0,
+            "bias_dur2_t": 0,
+        }
 
         for dur_key, dur in durations.items():
             if "bias" in dur_key:
@@ -324,17 +341,21 @@ def get_all_seq_durs(duration, max_len, min_len, crop_samples):
         dur1, dur_tr, dur2 = duration
         dur1_t = dur1 + dur_tr if ((dur1 >= min_len) and ((dur1 + dur_tr) <= (max_len + 4))) else None
         dur2_t = dur2 + dur_tr if ((dur2 >= min_len) and ((dur2 + dur_tr) <= (max_len + 4))) else None
-        durations = {"dur1": dur1 if ((dur1 >= min_len) and (dur1 <= (max_len + 4))) else None,
-                     "dur2": dur2 if ((dur2 >= min_len) and (dur2 <= (max_len + 4))) else None,
-                     "dur1_t": dur1_t,
-                     "dur2_t": dur2_t,
-                     "bias_dur1": 0,
-                     "bias_dur2": 0,
-                     "bias_dur1_t": 0,
-                     "bias_dur2_t": 0}
+        durations = {
+            "dur1": dur1 if ((dur1 >= min_len) and (dur1 <= (max_len + 4))) else None,
+            "dur2": dur2 if ((dur2 >= min_len) and (dur2 <= (max_len + 4))) else None,
+            "dur1_t": dur1_t,
+            "dur2_t": dur2_t,
+            "bias_dur1": 0,
+            "bias_dur2": 0,
+            "bias_dur1_t": 0,
+            "bias_dur2_t": 0,
+        }
+
         for dur_key, dur in durations.items():
             if "bias" in dur_key:
                 continue
+
             if dur != None:
                 if dur > max_len:
                     bias = random.randint(dur - max_len, 4)
@@ -347,25 +368,27 @@ def get_all_seq_durs(duration, max_len, min_len, crop_samples):
 
     return durations
 
+
 class BABEL(Dataset):
+
     dataname = "BABEL"
 
-    def __init__(self, datapath: str,
-                 transforms: Transform,
-                 split: str = "train",
-                 transforms_xyz: Optional[Transform] = None,
-                 transforms_smpl: Optional[Transform] = None,
-                 sampler=None,
-                 progress_bar: bool = True,
-                 load_with_rot=True,
-                 downsample=True,
-                 tiny: bool = False,
-                 walk_only: Optional[bool] = False,
-                 kit_only: Optional[bool] = False,
-                 dtype: str = 'separate_pairs',
-                 mode: str = 'train',
-                 parse_tokens: bool = False,
-                 **kwargs):
+    def __init__( self, datapath: str,
+                        transforms: Transform,
+                        split: str = "train",
+                        transforms_xyz: Optional[Transform] = None,
+                        transforms_smpl: Optional[Transform] = None,
+                        sampler=None,
+                        progress_bar: bool = True,
+                        load_with_rot=True,
+                        downsample=True,
+                        tiny: bool = False,
+                        walk_only: Optional[bool] = False,
+                        kit_only: Optional[bool] = False,
+                        dtype: str = 'separate_pairs',
+                        mode: str = 'train',
+                        parse_tokens: bool = False,
+                        **kwargs):
 
         self.split = split
         self.parse_tokens = parse_tokens
@@ -375,22 +398,26 @@ class BABEL(Dataset):
         # or all of the stuff --> 'seg', 'seq', 'pairs', 'pairs_only', ''
         self.walk_only = walk_only
         self.kit_only = kit_only
+
         if not self.load_with_rot:
             self.transforms_xyz = transforms_xyz
             self.transforms_smpl = transforms_smpl
             self.transforms = transforms_xyz
         else:
             self.transforms = transforms
+
         if self.split not in SPLITS:
             raise ValueError(f"{self.split} is not a valid split")
 
         assert sampler is not None, 'Must inject sampler via constructor'
         self.sampler = sampler
+
         super().__init__()
+
         if tiny:
-            data_for_split = get_split(path=datapath, split=split,
-                                       subset='_tiny')
+            data_for_split = get_split(path=datapath, split=split, subset='_tiny')
             self.babel_annots = read_json(Path(datapath) / f'../babel-teach/{split}.json')
+        
         else:
             data_for_split = get_split(path=datapath, split=split)
             self.babel_annots = read_json(Path(datapath) / f'../babel-teach/{split}.json')
@@ -399,6 +426,7 @@ class BABEL(Dataset):
         texts_data = {}
         durations = {}
         transitions_data = {}
+
         if progress_bar:
             enumerator = enumerate(tqdm(data_for_split, f"Loading BABEL {split}"))
         else:
@@ -418,6 +446,7 @@ class BABEL(Dataset):
         all_data_len = 0
         num_bad_bml = 0
         num_not_kit = 0
+
         self.sep_to_4 = True
         assert (self.sep_to_4==True)
 
@@ -425,6 +454,7 @@ class BABEL(Dataset):
             if self.kit_only and not tiny and 'KIT/KIT' not in sample['fname']:
                 num_not_kit += 1
                 continue
+
             if len(motion_data) >= maxdata:
                 break
 
@@ -442,33 +472,41 @@ class BABEL(Dataset):
 
             for index, seg in enumerate(seg_ids):
                 frames_0_valid, frames_1_valid = False, False
+
                 if self.dtype == 'separate_pairs':
                     fpair = separate_actions(seg)
                     duration = [(e - s + 1) for s, e in fpair]
                     duration[-1] -= 1
+
                     if self.sep_to_4:
                         if len(duration) == 2:
                             duration.insert(1, 0)
                         else:
                             duration[1] -= 1
+
                         dur_1, dur_tr, dur_2 = duration
                         dur_tr_valid = True if dur_tr > 0 else False
+                        
                         dur_dict = get_all_seq_durs(duration, sampler.max_len, sampler.min_len, crop_samples)
                         dur1, bias_dur1 = dur_dict["dur1"], dur_dict["bias_dur1"]
                         dur2, bias_dur2 = dur_dict["dur2"], dur_dict["bias_dur2"]
                         dur1_t, bias_dur1_t = dur_dict["dur1_t"], dur_dict["bias_dur1_t"]
                         dur2_t, bias_dur2_t = dur_dict["dur2_t"], dur_dict["bias_dur2_t"]
+                        
                         if dur1 != None:
                             frames_0_valid = True
                             frames_0 = np.arange(fpair[0][0], fpair[0][1]+1)[bias_dur1: bias_dur1 + dur1]
                             is_transition_0 = torch.zeros(dur_1)[bias_dur1: bias_dur1 + dur1]
+                            
                             if (dur_tr_valid) and (dur1_t != None):
                                 frames_0_T = np.arange(fpair[0][0], fpair[1][1]+1)[bias_dur1_t: bias_dur1_t + dur1_t]
                                 is_transition_0_T = torch.concatenate((torch.zeros(dur_1), torch.ones(dur_tr)))[bias_dur1_t: bias_dur1_t + dur1_t]
+                        
                         if dur2 != None:
                             frames_1_valid = True
                             frames_1 = np.arange(fpair[-1][0], fpair[-1][1]+1)[bias_dur2: bias_dur2 + dur2]
                             is_transition_1 = torch.zeros(dur_2)[bias_dur2: bias_dur2 + dur2]
+                            
                             if dur_tr_valid and (dur2_t != None) :
                                 frames_1_T = np.arange(fpair[1][0], fpair[-1][1]+1)[bias_dur2_t: bias_dur2_t + dur2_t]
                                 is_transition_1_T = torch.concatenate((torch.ones(dur_tr), torch.zeros(dur_2)))[bias_dur2_t: bias_dur2_t + dur2_t]
@@ -485,31 +523,34 @@ class BABEL(Dataset):
                     duration = len(frames)
 
                 if self.sep_to_4:
+
                     if frames_0_valid:
-                        smpl_data_0 = {"poses":
-                                           torch.from_numpy(sample['poses'][frames_0]).float(),
-                                       "trans":
-                                           torch.from_numpy(sample['trans'][frames_0]).float()}
+                        smpl_data_0 = {
+                            "poses": torch.from_numpy(sample['poses'][frames_0]).float(),
+                            "trans": torch.from_numpy(sample['trans'][frames_0]).float(),
+                        }
                         if dur_tr_valid and (dur1_t != None):
-                            smpl_data_0_T = {"poses":
-                                                 torch.from_numpy(sample['poses'][frames_0_T]).float(),
-                                             "trans":
-                                                 torch.from_numpy(sample['trans'][frames_0_T]).float()}
+                            smpl_data_0_T = {
+                                "poses": torch.from_numpy(sample['poses'][frames_0_T]).float(),
+                                "trans": torch.from_numpy(sample['trans'][frames_0_T]).float(),
+                            }
+
                     if frames_1_valid:
-                        smpl_data_1 = {"poses":
-                                           torch.from_numpy(sample['poses'][frames_1]).float(),
-                                       "trans":
-                                           torch.from_numpy(sample['trans'][frames_1]).float()}
+                        smpl_data_1 = {
+                            "poses": torch.from_numpy(sample['poses'][frames_1]).float(),
+                            "trans": torch.from_numpy(sample['trans'][frames_1]).float(),
+                        }
                         if dur_tr_valid and (dur2_t != None):
-                            smpl_data_1_T = {"poses":
-                                                 torch.from_numpy(sample['poses'][frames_1_T]).float(),
-                                             "trans":
-                                                 torch.from_numpy(sample['trans'][frames_1_T]).float()}
+                            smpl_data_1_T = {
+                                "poses": torch.from_numpy(sample['poses'][frames_1_T]).float(),
+                                "trans": torch.from_numpy(sample['trans'][frames_1_T]).float(),
+                            }
                 else:
-                    smpl_data = {"poses":
-                                     torch.from_numpy(sample['poses'][frames]).float(),
-                                 "trans":
-                                     torch.from_numpy(sample['trans'][frames]).float()}
+                    smpl_data = {
+                        "poses": torch.from_numpy(sample['poses'][frames]).float(),
+                        "trans": torch.from_numpy(sample['trans'][frames]).float(),
+                    }
+
                 # pose: [T, 22, 3, 3]
                 # if split != 'test': # maybe include this (it was there originally): split != "test"
                 if not self.dtype == 'separate_pairs':
@@ -521,11 +562,13 @@ class BABEL(Dataset):
                     # check acceptance for long sequences ... TODO
                     if not self.sep_to_4:  # do not accept by duration
                         dur1, dur_tr, dur2 = duration
-                        if not (self.sampler.accept(dur1) and self.sampler.accept(dur2)
-                                and self.sampler.accept(dur1 + dur_tr) and self.sampler.accept(dur2 + dur_tr)):
+                        if not (self.sampler.accept(dur1         ) and self.sampler.accept(dur2         )
+                            and self.sampler.accept(dur1 + dur_tr) and self.sampler.accept(dur2 + dur_tr)):
                             num_bad_short += 1
                             continue
+
                 valid_data_len += 1
+
                 if seg_acts[index] in EXCLUDED_ACTIONS:
                     num_bad_actions += 1
                     continue
@@ -535,19 +578,21 @@ class BABEL(Dataset):
                         num_bad_actions += 1
                         continue
 
-                from data_loaders.amass.tools.smpl import smpl_data_to_matrix_and_trans
+                from src.mdm_prior.data_loaders.amass.tools.smpl import smpl_data_to_matrix_and_trans
                 # here we take smpl data in poses/trans and move to rots/trans
                 if self.sep_to_4:
                     if frames_0_valid:
                         smpl_data_0 = smpl_data_to_matrix_and_trans(smpl_data_0, nohands=True)
                         if dur_tr_valid and (dur1_t != None):
                             smpl_data_0_T = smpl_data_to_matrix_and_trans(smpl_data_0_T, nohands=True)
+
                     if frames_1_valid:
                         smpl_data_1 = smpl_data_to_matrix_and_trans(smpl_data_1, nohands=True)
                         if dur_tr_valid and (dur2_t != None):
                             smpl_data_1_T = smpl_data_to_matrix_and_trans(smpl_data_1_T, nohands=True)
                 else:
                     smpl_data = smpl_data_to_matrix_and_trans(smpl_data, nohands=True)
+                
                 # Load rotation features (rfeats) data from AMASS
                 if mode == 'train':
                     # if split != 'test' and split != 'val':
@@ -557,6 +602,7 @@ class BABEL(Dataset):
                                 features_0 = self.transforms.rots2rfeats(smpl_data_0)
                                 if dur_tr_valid and (dur1_t != None):
                                     features_0_T = self.transforms.rots2rfeats(smpl_data_0_T)
+                            
                             if frames_1_valid:
                                 features_1 = self.transforms.rots2rfeats(smpl_data_1)
                                 if dur_tr_valid and (dur2_t != None):
@@ -573,27 +619,36 @@ class BABEL(Dataset):
                 if self.dtype == 'separate_pairs':
                     if self.sep_to_4:
                         if frames_0_valid:
-                            texts_data[f'{babel_id}-{index}-{1}'] = seg_acts[index][0]
-                            durations[f'{babel_id}-{index}-{1}'] = dur1
-                            transitions_data[f'{babel_id}-{index}-{1}'] = is_transition_0
+                            k = f'{babel_id}-{index}-{1}'
+                            texts_data[k] = seg_acts[index][0]
+                            durations[k] = dur1
+                            transitions_data[k] = is_transition_0
+                            
                             if dur_tr_valid and (dur1_t != None):
-                                texts_data[f'{babel_id}-{index}-{1_1}'] = seg_acts[index][0]
-                                durations[f'{babel_id}-{index}-{1_1}'] = dur1_t
-                                transitions_data[f'{babel_id}-{index}-{1_1}'] = is_transition_0_T
+                                k = f'{babel_id}-{index}-{1_1}'
+                                texts_data[k] = seg_acts[index][0]
+                                durations[k] = dur1_t
+                                transitions_data[k] = is_transition_0_T
+                        
                         if frames_1_valid:
-                            texts_data[f'{babel_id}-{index}-{2}'] = seg_acts[index][1]
-                            durations[f'{babel_id}-{index}-{2}'] = dur2
-                            transitions_data[f'{babel_id}-{index}-{2}'] = is_transition_1
+                            k = f'{babel_id}-{index}-{2}'
+                            texts_data[k] = seg_acts[index][1]
+                            durations[k] = dur2
+                            transitions_data[k] = is_transition_1
+                           
                             if dur_tr_valid and (dur2_t != None):
-                                texts_data[f'{babel_id}-{index}-{2_1}'] = seg_acts[index][1]
-                                durations[f'{babel_id}-{index}-{2_1}'] = dur2_t
-                                transitions_data[f'{babel_id}-{index}-{2_1}'] = is_transition_1_T
+                                k = f'{babel_id}-{index}-{2_1}'
+                                texts_data[k] = seg_acts[index][1]
+                                durations[k] = dur2_t
+                                transitions_data[k] = is_transition_1_T
                     else:
-                        texts_data[f'{babel_id}-{index}'] = seg_acts[index]
-                        durations[f'{babel_id}-{index}'] = duration
+                        k = f'{babel_id}-{index}'
+                        texts_data[k] = seg_acts[index]
+                        durations[k] = duration
                 else:
-                    texts_data[f'{babel_id}-{index}'] = seg_acts[index]
-                    durations[f'{babel_id}-{index}'] = duration
+                    k = f'{babel_id}-{index}'
+                    texts_data[k] = seg_acts[index]
+                    durations[k] = duration
 
                 if mode == 'train':
                     if self.sep_to_4:
@@ -610,18 +665,22 @@ class BABEL(Dataset):
                         motion_data[f'{babel_id}-{index}'] = features
                 else:
                     motion_data[f'{babel_id}-{index}'] = joints
+
         if split != "test" and not tiny:
             total = valid_data_len
+
             logger.info(f"Processed {all_data_len} sequences and found {invalid} invalid cases based on the datatype.")
             logger.info(f"{total} sequences -- datatype:{self.dtype}.")
+            
             percentage = 100 * (num_bad_actions + num_bad_short) / (total + num_bad_short + num_bad_actions)
             logger.info(f"{percentage:.4}% of the sequences which are rejected by the sampler in total.")
+            
             percentage = 100 * num_bad_actions / (total + num_bad_short + num_bad_actions)
-            logger.info(
-                f"{percentage:.4}% of the sequence which are rejected by the sampler, because of the excluded actions.")
+            logger.info(f"{percentage:.4}% of the sequence which are rejected by the sampler, because of the excluded actions.")
+            
             percentage = 100 * num_bad_short / (total + num_bad_short + num_bad_actions)
-            logger.info(
-                f"{percentage:.4}% of the sequence which are rejected by the sampler, because they are too short(<{self.sampler.min_len / 30} secs) or too long(>{self.sampler.max_len / 30} secs).")
+            logger.info(f"{percentage:.4}% of the sequence which are rejected by the sampler, because they are too short(<{self.sampler.min_len / 30} secs) or too long(>{self.sampler.max_len / 30} secs).")
+            
             logger.info(f"Discard from BML: {num_bad_bml}")
             logger.info(f"Discard not KIT: {num_not_kit}")
 
@@ -631,7 +690,10 @@ class BABEL(Dataset):
 
         def get_tokens(caption):
             word_list, pose_list = process_text(caption)
-            return ['%s/%s' % (word_list[i], pose_list[i]) for i in range(len(word_list))]
+            return [
+                '%s/%s' % (word_list[i], pose_list[i]) 
+                for i in range(len(word_list))
+            ]
 
         if self.parse_tokens:
             self.tokens_data = {}
@@ -645,6 +707,7 @@ class BABEL(Dataset):
         # if not tiny:
         self._split_index = list(motion_data.keys())
         self._num_frames_in_sequence = durations
+
         # breakpoint()
         self.keyids = list(self.motion_data.keys())
 
@@ -688,12 +751,13 @@ class BABEL(Dataset):
                     length = self._num_frames_in_sequence[keyid]
                     is_transition = self.transitions_data[keyid]
 
-                    element = {"features": features,
-                               "length": length,
-                               "is_transition": is_transition,
-                               "keyid": keyid,
-                               "text": text,
-                               }
+                    element = {
+                            "features": features,
+                            "length": length,
+                    "is_transition": is_transition,
+                            "keyid": keyid,
+                            "text": text,
+                        }
                 else:
                     features = self.motion_data[keyid]
                     length_0, length_transition, length_1 = self._num_frames_in_sequence[keyid]
@@ -704,20 +768,20 @@ class BABEL(Dataset):
 
                     features_0_with_transition = features[:(length_0 + length_transition)]
 
-
-                    element = {"features_0": features_0,
-                               "features_1": features_1,
-                               "features_1_with_transition": features_1_with_transition,
-                               "features_0_with_transition": features_0_with_transition,
-                               "length_0": length_0,
-                               "length_1": length_1,
-                               "length_transition": length_transition,
-                               "length_1_with_transition": length_1 + length_transition,
-                               "length_0_with_transition": length_0 + length_transition,
-                               "keyid": keyid,
-                               "text_0": text[0],
-                               "text_1": text[1],
-                               }
+                    element = {
+                        "features_0": features_0,
+                        "features_1": features_1,
+                        "features_1_with_transition": features_1_with_transition,
+                        "features_0_with_transition": features_0_with_transition,
+                        "length_0": length_0,
+                        "length_1": length_1,
+                        "length_transition": length_transition,
+                        "length_1_with_transition": length_1 + length_transition,
+                        "length_0_with_transition": length_0 + length_transition,
+                        "keyid": keyid,
+                        "text_0": text[0],
+                        "text_1": text[1],
+                    }
 
                 if self.parse_tokens:
                     if self.sep_to_4:
@@ -733,8 +797,12 @@ class BABEL(Dataset):
             else:
                 frame_ix = self.sampler(num_frames)
                 datastruct = self._load_datastruct(keyid, frame_ix)
-                element = {'datastruct': datastruct, 'text': text,
-                           'length': len(datastruct), 'keyid': keyid}
+                element = {
+                    'datastruct': datastruct, 
+                    'length': len(datastruct), 
+                    'text': text,
+                    'keyid': keyid,
+                }
         else:
             raise ValueError("mdm project - you should never use mode other than train in our scope")
         return element
@@ -748,11 +816,13 @@ class BABEL(Dataset):
         texts = []
         lens = []
         ov = False
+
         if len(segs_keyids) == 1:
             t0, t1 = self._load_text(current)
             l0, lt, l1 = self._num_frames_in_sequence[current]
             lens = [l0, l1 + lt]
             texts = [t0, t1]
+
         else:
             while True:
                 t0, t1 = self._load_text(current)
@@ -763,28 +833,35 @@ class BABEL(Dataset):
                     l1t = lt + l1
                     lens.append(l0)
                     lens.append(l1t)
+
                 else:
                     texts.append(t1)
                     l1t = lt + l1
                     lens.append(l1t)
+
                 if current == segs_keyids[-1]:
                     break
-                candidate_next = [i for i in segs_keyids[(segs_keyids.index(current) + 1):] if
-                                  self._load_text(i)[0] == t1]
+
+                candidate_next = [i for i in segs_keyids[(segs_keyids.index(current) + 1):] 
+                                    if self._load_text(i)[0] == t1]
 
                 if candidate_next:
                     ov = True
                     max_id = np.argmax(np.array([self._num_frames_in_sequence[cn][1] for cn in candidate_next]))
                     next_seg = candidate_next[max_id]
                     current = next_seg
+
                 else:
                     ov = False
                     if current != segs_keyids[-1]:
                         current = segs_keyids[segs_keyids.index(current) + 1]
                     else:
                         continue
-        element = {'length': lens,
-                   'text': texts}
+
+        element = {
+            'length': lens,
+            'text': texts,
+        }
         return element
 
     def __getitem__(self, index):
