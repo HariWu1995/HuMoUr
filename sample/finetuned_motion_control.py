@@ -8,34 +8,38 @@ import shutil
 import numpy as np
 import torch
 
-from diffusion.inpainting_gaussian_diffusion import InpaintingGaussianDiffusion
-from diffusion.respace import SpacedDiffusion
-
 from utils import dist_util
 from utils.seeding import fix_seed
-from utils.model_util import load_model_blending_and_diffusion
-from utils.parser_util import edit_inpainting_args
 
-from model.model_blending import ModelBlender
-from model.cfg_sampler import wrap_model
+from src.mdm_prior.diffusion.gaussian_diffusion_inpaint import GaussianDiffusionInpainting
+from src.mdm_prior.diffusion.respace import SpacedDiffusion
 
-import data_loaders.humanml.utils.paramUtil as paramUtil
-from data_loaders.get_data import get_dataset_loader
-from data_loaders.humanml_utils import get_inpainting_mask
-from data_loaders.humanml.utils.plot_script import plot_3d_motion
-from data_loaders.humanml.scripts.motion_process import recover_from_ric
+from src.mdm_prior.utils.model_util import load_model_blending_and_diffusion
+from src.mdm_prior.utils.parser_util import edit_inpainting_args
+
+from src.mdm_prior.model.model_blending import ModelBlender
+from src.mdm_prior.model.cfg_sampler import wrap_model
+
+import src.mdm_prior.data_loaders.humanml.utils.paramUtil as paramUtil
+from src.mdm_prior.data_loaders.get_data import get_dataset_loader
+from src.mdm_prior.data_loaders.humanml_utils import get_inpainting_mask
+from src.mdm_prior.data_loaders.humanml.utils.plot_script import plot_3d_motion
+from src.mdm_prior.data_loaders.humanml.scripts.motion_process import recover_from_ric
 
 
 def main():
     args_list = edit_inpainting_args()
     args = args_list[0]
     fix_seed(args.seed)
-    out_path = args.output_dir
+
     name = os.path.basename(os.path.dirname(args.model_path))
     niter = os.path.basename(args.model_path).replace('model', '').replace('.pt', '')
+    
     max_frames = 196 if args.dataset in ['kit', 'humanml'] else 60
     fps = 12.5 if args.dataset == 'kit' else 20
     dist_util.setup_dist(args.device)
+
+    out_path = args.output_dir
     if out_path == '':
         out_path = os.path.join(os.path.dirname(args.model_path),
                                 'edit_{}_{}_{}_seed{}'.format(name, niter, args.inpainting_mask, args.seed))
@@ -45,6 +49,7 @@ def main():
     print('Loading dataset...')
     assert args.num_samples <= args.batch_size, \
         f'Please either increase batch_size({args.batch_size}) or reduce num_samples({args.num_samples})'
+    
     # So why do we need this check? In order to protect GPU from a memory overload in the following line.
     # If your GPU can handle batch size larger then default, you can specify it through --batch_size flag.
     # If it doesn't, and you still want to sample more prompts, run this script with different seeds
@@ -87,7 +92,6 @@ def main():
         model_kwargs['y']['scale'] = torch.ones(args.batch_size, device=dist_util.dev()) * args.guidance_param
 
         sample_fn = diffusion.p_sample_loop
-
         sample = sample_fn(
             model,
             (args.batch_size, model.njoints, model.nfeats, max_frames),
@@ -152,6 +156,7 @@ def main():
             caption = 'Input Motion'
             length = model_kwargs['y']['lengths'][sample_i]
             motion = input_motions[sample_i].transpose(2, 0, 1)[:length]
+
             save_file = 'input_motion{:02d}.mp4'.format(sample_i)
             animation_save_path = os.path.join(out_path, save_file)
             rep_files.append(animation_save_path)
@@ -169,6 +174,7 @@ def main():
                 
             length = all_lengths[rep_i*args.batch_size + sample_i]
             motion = all_motions[rep_i*args.batch_size + sample_i].transpose(2, 0, 1)[:length]
+            
             save_file = 'sample{:02d}_rep{:02d}.mp4'.format(sample_i, rep_i)
             animation_save_path = os.path.join(out_path, save_file)
             rep_files.append(animation_save_path)

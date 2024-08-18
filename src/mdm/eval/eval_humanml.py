@@ -1,10 +1,10 @@
 from datetime import datetime
 from collections import OrderedDict
 
-from diffusion import logger
-
 from utils import dist_util
 from utils.seeding import fix_seed
+
+from src.mdm.diffusion import logger
 
 from src.mdm.utils.parser_util import evaluation_parser
 from src.mdm.utils.model_util import create_model_and_diffusion, load_model_wo_clip

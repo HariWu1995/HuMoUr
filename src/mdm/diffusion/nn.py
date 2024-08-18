@@ -11,11 +11,13 @@ import torch.nn as nn
 
 # PyTorch 1.7 has SiLU, but we support PyTorch 1.5.
 class SiLU(nn.Module):
+
     def forward(self, x):
         return x * th.sigmoid(x)
 
 
 class GroupNorm32(nn.GroupNorm):
+    
     def forward(self, x):
         return super().forward(x.float()).type(x.dtype)
 
@@ -115,6 +117,7 @@ def timestep_embedding(timesteps, dim, max_period=10000):
                       These may be fractional.
     :param dim: the dimension of the output.
     :param max_period: controls the minimum frequency of the embeddings.
+
     :return: an [N x dim] Tensor of positional embeddings.
     """
     half = dim // 2
@@ -146,6 +149,7 @@ def checkpoint(func, inputs, params, flag):
 
 
 class CheckpointFunction(th.autograd.Function):
+
     @staticmethod
     @th.cuda.amp.custom_fwd
     def forward(ctx, run_function, length, *args):

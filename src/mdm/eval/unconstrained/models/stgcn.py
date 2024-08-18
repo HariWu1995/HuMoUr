@@ -2,8 +2,9 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from eval.a2m.recognition.models.stgcnutils.tgcn import ConvTemporalGraphical
-from eval.unconstrained.models.stgcnutils.graph import Graph
+from src.mdm.eval.a2m.recognition.models.stgcnutils.tgcn import ConvTemporalGraphical
+from src.mdm.eval.unconstrained.models.stgcnutils.graph import Graph
+
 
 __all__ = ["STGCN"]
 
@@ -25,7 +26,6 @@ class STGCN(nn.Module):
             :math:`V_{in}` is the number of graph nodes,
             :math:`M_{in}` is the number of instance in a frame.
     """
-
     def __init__(self, in_channels, num_class, graph_args,
                  edge_importance_weighting, device, **kwargs):
         super().__init__()
@@ -48,7 +48,9 @@ class STGCN(nn.Module):
         self.data_bn = nn.BatchNorm1d(in_channels * A.size(1))
         # self.data_bn = nn.BatchNorm1d(in_channels * A.size(1), track_running_stats=False)
         # self.data_bn = nn.InstanceNorm1d(in_channels * A.size(1))
-        kwargs0 = {k: v for k, v in kwargs.items() if k != 'dropout'}
+        kwargs0 = {
+            k: v for k, v in kwargs.items() if k != 'dropout'
+        }
         self.st_gcn_networks = nn.ModuleList((
             st_gcn(in_channels, 64, kernel_size, 1, residual=False, **kwargs0),
             st_gcn(64, 64, kernel_size, 1, **kwargs),
@@ -153,7 +155,6 @@ class st_gcn(nn.Module):
             :math:`T_{in}/T_{out}` is a length of input/output sequence,
             :math:`V` is the number of graph nodes.
     """
-
     def __init__(self,
                  in_channels,
                  out_channels,
@@ -212,6 +213,7 @@ class st_gcn(nn.Module):
 
 
 if __name__ == "__main__":
+
     model = STGCN(in_channels=3, num_class=60, edge_importance_weighting=True, graph_args={"layout": "smpl_noglobal", "strategy": "spatial"})
     # Batch, in_channels, time, vertices, M
     inp = torch.rand(10, 3, 16, 23, 1)

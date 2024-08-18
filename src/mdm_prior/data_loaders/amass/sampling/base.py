@@ -14,11 +14,10 @@
 #
 # Contact: ps-license@tuebingen.mpg.de
 
-
 from typing import Optional
 from dataclasses import dataclass
 
-# from utils.parser_util import frame_sampler_parser
+# from src.mdm_prior.utils.parser_util import frame_sampler_parser
 
 
 @dataclass

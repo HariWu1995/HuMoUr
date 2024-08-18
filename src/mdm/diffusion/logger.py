@@ -4,16 +4,21 @@ https://github.com/openai/baselines/blob/ea25b9e8b234e6ee1bca43083f8f3cf97414399
 """
 
 import os
+import os.path as osp
+
 import sys
 import shutil
-import os.path as osp
+import warnings
+
 import json
+import tempfile
+
 import time
 import datetime
-import tempfile
-import warnings
+
 from collections import defaultdict
 from contextlib import contextmanager
+
 
 DEBUG = 10
 INFO = 20
@@ -24,24 +29,26 @@ DISABLED = 50
 
 
 class KVWriter(object):
+
     def writekvs(self, kvs):
         raise NotImplementedError
 
 
 class SeqWriter(object):
+
     def writeseq(self, seq):
         raise NotImplementedError
 
 
 class HumanOutputFormat(KVWriter, SeqWriter):
+
     def __init__(self, filename_or_file):
         if isinstance(filename_or_file, str):
             self.file = open(filename_or_file, "wt")
             self.own_file = True
         else:
-            assert hasattr(filename_or_file, "read"), (
+            assert hasattr(filename_or_file, "read"), \
                 "expected file or str, got %s" % filename_or_file
-            )
             self.file = filename_or_file
             self.own_file = False
 
@@ -96,6 +103,7 @@ class HumanOutputFormat(KVWriter, SeqWriter):
 
 
 class JSONOutputFormat(KVWriter):
+
     def __init__(self, filename):
         self.file = open(filename, "wt")
 
@@ -111,6 +119,7 @@ class JSONOutputFormat(KVWriter):
 
 
 class CSVOutputFormat(KVWriter):
+
     def __init__(self, filename):
         self.file = open(filename, "w+t")
         self.keys = []
@@ -122,18 +131,22 @@ class CSVOutputFormat(KVWriter):
         extra_keys.sort()
         if extra_keys:
             self.keys.extend(extra_keys)
+
             self.file.seek(0)
             lines = self.file.readlines()
+
             self.file.seek(0)
             for (i, k) in enumerate(self.keys):
                 if i > 0:
                     self.file.write(",")
                 self.file.write(k)
+
             self.file.write("\n")
             for line in lines[1:]:
                 self.file.write(line[:-1])
                 self.file.write(self.sep * len(extra_keys))
                 self.file.write("\n")
+
         for (i, k) in enumerate(self.keys):
             if i > 0:
                 self.file.write(",")
@@ -151,13 +164,13 @@ class TensorBoardOutputFormat(KVWriter):
     """
     Dumps key/value pairs into TensorBoard's numeric format.
     """
-
     def __init__(self, dir):
         os.makedirs(dir, exist_ok=True)
         self.dir = dir
         self.step = 1
         prefix = "events"
         path = osp.join(osp.abspath(dir), prefix)
+
         import tensorflow as tf
         from tensorflow.python import pywrap_tensorflow
         from tensorflow.core.util import event_pb2
@@ -169,6 +182,7 @@ class TensorBoardOutputFormat(KVWriter):
         self.writer = pywrap_tensorflow.EventsWriter(compat.as_bytes(path))
 
     def writekvs(self, kvs):
+
         def summary_val(k, v):
             kwargs = {"tag": k, "simple_value": float(v)}
             return self.tf.Summary.Value(**kwargs)
@@ -207,8 +221,6 @@ def make_output_format(format, ev_dir, log_suffix=""):
 # ================================================================
 # API
 # ================================================================
-
-
 def logkv(key, val):
     """
     Log a value of some diagnostic
@@ -306,7 +318,6 @@ def profile(n):
     @profile("my_func")
     def my_func(): code
     """
-
     def decorator_with_name(func):
         def func_wrapper(*args, **kwargs):
             with profile_kv(n):
@@ -330,9 +341,10 @@ def get_current():
 
 
 class Logger(object):
+
+    CURRENT = None  # Current logger being used by the free functions above
     DEFAULT = None  # A logger with no output files. (See right below class definition)
     # So that you can still log to the terminal without setting up any output files
-    CURRENT = None  # Current logger being used by the free functions above
 
     def __init__(self, dir, output_formats, comm=None):
         self.name2val = defaultdict(float)  # values this iteration
@@ -365,10 +377,12 @@ class Logger(object):
             )
             if self.comm.rank != 0:
                 d["dummy"] = 1  # so we don't get a warning about empty dict
+                
         out = d.copy()  # Return the dict for unit testing purposes
         for fmt in self.output_formats:
             if isinstance(fmt, KVWriter):
                 fmt.writekvs(d)
+
         self.name2val.clear()
         self.name2cnt.clear()
         return out

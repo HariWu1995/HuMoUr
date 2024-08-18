@@ -2,11 +2,11 @@ import os
 import torch
 import numpy as np
 
-from diffusion import logger
-
 import utils.rotation_conversions as geometry
 from utils import dist_util
 from utils.seeding import fix_seed
+
+from src.mdm_prior.diffusion import logger
 
 from src.mdm_prior.data_loaders.get_data import get_dataset_loader
 from src.mdm_prior.data_loaders.humanml.scripts.motion_process import recover_from_ric

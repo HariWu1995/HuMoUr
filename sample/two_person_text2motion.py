@@ -10,35 +10,39 @@ import torch
 
 from utils import dist_util
 from utils.seeding import fix_seed
-from utils.model_util import create_model_and_diffusion, load_model
-from utils.parser_util import generate_multi_args
 import utils.rotation_conversions as geometry
 
-from model.comMDM import ComMDM
-from model.cfg_sampler import ClassifierFreeSampleModel
+from src.mdm_prior.utils.model_util import create_model_and_diffusion, load_model
+from src.mdm_prior.utils.parser_util import generate_multi_args
 
-import data_loaders.humanml.utils.paramUtil as paramUtil
-from data_loaders.tensors import collate
-from data_loaders.get_data import get_dataset_loader
-from data_loaders.humanml.scripts.motion_process import recover_from_ric
-from data_loaders.humanml.utils.plot_script import plot_3d_motion
+from src.mdm_prior.model.comMDM import ComMDM
+from src.mdm_prior.model.cfg_sampler import ClassifierFreeSampleModel
+
+from src.mdm_prior.data_loaders.tensors import collate
+from src.mdm_prior.data_loaders.get_data import get_dataset_loader
+from src.mdm_prior.data_loaders.humanml.utils.plot_script import plot_3d_motion
+from src.mdm_prior.data_loaders.humanml.scripts.motion_process import recover_from_ric
+import src.mdm_prior.data_loaders.humanml.utils.paramUtil as paramUtil
 
 
 def main():
     print(f"generating samples")
     args = generate_multi_args()
     fix_seed(args.seed)
-    out_path = args.output_dir
+
     name = os.path.basename(os.path.dirname(args.model_path))
     niter = os.path.basename(args.model_path).replace('model', '').replace('.pt', '')
     args.guidance_param = 1.  # Hard coded - higher values will work but will limit diversity.
+    
     max_frames = 120
     fps = 20
     n_frames = 120
     sample1 = None
     is_using_data = not any([args.input_text, args.text_prompt])
+
     dist_util.setup_dist(args.device)
 
+    out_path = args.output_dir
     if out_path == '':
         out_path = os.path.join(os.path.dirname(args.model_path),
                                 'two_person_text_{}_{}_seed{}'.format(name, niter, args.seed))
@@ -79,6 +83,7 @@ def main():
         iterator = iter(data)
         gt_motion, model_kwargs = next(iterator)
         n_frames = int(max(model_kwargs['y']['lengths']))
+
     else:
         collate_args = [{'inp': torch.zeros(n_frames), 'tokens': None, 'lengths': n_frames}] * args.num_samples
         collate_args = [dict(arg, text=txt) for arg, txt in zip(collate_args, texts)]
@@ -119,12 +124,16 @@ def main():
             sample1 = model_kwargs['y']['other_motion'].cpu()
 
         canon0, sample = torch.split(sample, [1, sample.shape[-1] - 1], dim=-1)
-        canon0 = data.dataset.t2m_dataset.rebuilt_canon(canon0[:, :4, 0, 0])
         canon1, sample1 = torch.split(sample1, [1, sample1.shape[-1] - 1], dim=-1)
+
+        canon0 = data.dataset.t2m_dataset.rebuilt_canon(canon0[:, :4, 0, 0])
         canon1 = data.dataset.t2m_dataset.rebuilt_canon(canon1[:, :4, 0, 0])
+
         diff_trans = canon1[:, -3:] - canon0[:, -3:]
+
         _rot0 = geometry.rotation_6d_to_matrix(canon0[:, :6])
         _rot1 = geometry.rotation_6d_to_matrix(canon1[:, :6])
+
         diff_rot = torch.matmul(_rot0, _rot1.permute(0, 2, 1)).float().cpu()
 
         # Recover XYZ *positions* from HumanML3D vector representation
@@ -197,6 +206,7 @@ def main():
             print(f'[({sample_i}) "{caption}" | Rep #{rep_i} | -> {save_file}]')
             plot_3d_motion(animation_save_path, skeleton, motion, dataset=args.dataset, title=caption, fps=fps, vis_mode = 'gt' if args.sample_gt else 'default',
                            joints2=motion1)#, captions=captions)
+                           
             # Credit for visualization: 
             #       https://github.com/EricGuo5513/text-to-motion
             rep_files.append(animation_save_path)

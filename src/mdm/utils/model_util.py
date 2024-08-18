@@ -1,5 +1,5 @@
-from diffusion import gaussian_diffusion as gd
-from diffusion.respace import SpacedDiffusion, space_timesteps
+from src.mdm.diffusion import gaussian_diffusion as gd
+from src.mdm.diffusion.respace import SpacedDiffusion, space_timesteps
 
 from src.mdm.model.mdm import MDM
 from src.mdm.utils.parser_util import get_cond_mode

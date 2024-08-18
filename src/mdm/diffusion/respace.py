@@ -2,7 +2,7 @@
 import numpy as np
 import torch as th
 
-from .gaussian_diffusion import GaussianDiffusion
+from src.mdm.diffusion.gaussian_diffusion import GaussianDiffusion
 
 
 def space_timesteps(num_timesteps, section_counts):
@@ -25,6 +25,7 @@ def space_timesteps(num_timesteps, section_counts):
                            per section. As a special case, use "ddimN" where N
                            is a number of steps to use the striding from the
                            DDIM paper.
+                           
     :return: a set of diffusion steps from the original process to use.
     """
     if isinstance(section_counts, str):
@@ -69,7 +70,6 @@ class SpacedDiffusion(GaussianDiffusion):
                           original diffusion process to retain.
     :param kwargs: the kwargs to create the base diffusion process.
     """
-
     def __init__(self, use_timesteps, **kwargs):
         self.use_timesteps = set(use_timesteps)
         self.timestep_map = []
@@ -115,6 +115,7 @@ class SpacedDiffusion(GaussianDiffusion):
 
 
 class _WrappedModel:
+
     def __init__(self, model, timestep_map, rescale_timesteps, original_num_steps):
         self.model = model
         self.timestep_map = timestep_map

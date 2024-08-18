@@ -11,17 +11,19 @@ import torch
 
 from utils import dist_util
 from utils.seeding import fix_seed
-from utils.model_util import load_model
-from utils.parser_util import generate_args
 
-from model.DoubleTake_MDM import doubleTake_MDM
-from model.cfg_sampler import ClassifierFreeSampleModel
+from src.mdm_prior.utils.model_util import load_model
+from src.mdm_prior.utils.parser_util import generate_args
 
-import data_loaders.humanml.utils.paramUtil as paramUtil
-from utils.sampling_utils import unfold_sample_arb_len, double_take_arb_len
-from data_loaders.get_data import get_dataset_loader
-from data_loaders.humanml.utils.plot_script import plot_3d_motion
-from data_loaders.humanml.scripts.motion_process import recover_from_ric
+from src.mdm_prior.model.DoubleTake_MDM import doubleTake_MDM
+from src.mdm_prior.model.cfg_sampler import ClassifierFreeSampleModel
+
+import src.mdm_prior.data_loaders.humanml.utils.paramUtil as paramUtil
+from src.mdm_prior.data_loaders.get_data import get_dataset_loader
+from src.mdm_prior.data_loaders.humanml.utils.plot_script import plot_3d_motion
+from src.mdm_prior.data_loaders.humanml.scripts.motion_process import recover_from_ric
+
+from src.mdm_prior.utils.sampling_utils import unfold_sample_arb_len, double_take_arb_len
 
 
 def calc_frame_colors(handshake_size, blend_size, step_sizes, lengths):
@@ -47,15 +49,18 @@ def main():
     print(f"generating samples")
     args = generate_args()
     fix_seed(args.seed)
-    out_path = args.output_dir
+
     name = os.path.basename(os.path.dirname(args.model_path))
     niter = os.path.basename(args.model_path).replace('model', '').replace('.pt', '')
+    
     fps = 30 if args.dataset == 'babel' else 20
     n_frames = 150
     is_using_data = not args.input_text
     dist_util.setup_dist(args.device)
     is_csv, is_txt = False, False
     assert (args.double_take)
+
+    out_path = args.output_dir
     if out_path == '':
         out_path = os.path.join(os.path.dirname(args.model_path),
                                 'DoubleTake_samples_{}_{}_seed{}'.format(name, niter, args.seed))
@@ -68,6 +73,7 @@ def main():
                 is_csv = True
             else:
                 raise TypeError("Incorrect text file type, use csv or txt")
+
         if args.sample_gt:
             out_path += "_gt"
         out_path += f"_handshake_{args.handshake_size}"
@@ -84,6 +90,7 @@ def main():
                 texts = fr.readlines()
             texts = [s.replace('\n', '') for s in texts]
             args.num_samples = len(texts)
+
         elif is_csv:
             df = pd.read_csv(args.input_text)
             args.num_samples = len(list(df['text']))
@@ -168,9 +175,10 @@ def main():
                 from data_loaders.amass.transforms import SlimSMPLTransform
                 transform = SlimSMPLTransform(batch_size=args.batch_size, name='SlimSMPLTransform', ename='smplnh', normalization=True)
 
-                all_feature = sample #[bs, nfeats, 1, seq_len]
-                all_feature_squeeze = all_feature.squeeze(2) #[bs, nfeats, seq_len]
-                all_feature_permutes = all_feature_squeeze.permute(0, 2, 1) #[bs, seq_len, nfeats]
+                all_feature = sample                                        # [bs, nfeats, 1, seq_len]
+                all_feature_squeeze = all_feature.squeeze(2)                # [bs, nfeats, seq_len]
+                all_feature_permutes = all_feature_squeeze.permute(0, 2, 1) # [bs, seq_len, nfeats]
+                
                 splitted = torch.split(all_feature_permutes, all_feature.shape[0]) #[list of [seq_len,nfeats]]
                 sample_list = []
                 for seq in splitted[0]:
@@ -249,9 +257,11 @@ def main():
             caption = [f'{samples_type_i} {all_text[0]}'] * (model_kwargs['y']['lengths'][0] - int(args.handshake_size/2))
             for ii in range(1, old_num_samples):
                 caption += [f'{samples_type_i} {all_text[ii]}'] * (int(model_kwargs['y']['lengths'][ii])-args.handshake_size)
+            
             caption += [f'{samples_type_i} {all_text[ii]}'] * (int(args.handshake_size/2))
             length = all_lengths[rep_i*args.batch_size + sample_i]
             motion = all_motions[rep_i*args.batch_size + sample_i].transpose(2, 0, 1)[:length]
+            
             save_file = 'sample{:02d}_rep{:02d}.mp4'.format(sample_i, rep_i)
             animation_save_path = os.path.join(out_path, save_file)
             print(f'[({sample_i}) "{set(caption)}" | Rep #{rep_i} | -> {save_file}]')
@@ -271,7 +281,6 @@ def main():
             print(f'[({sample_i}) "{set(caption)}" | all repetitions | -> {all_rep_save_file}]')
             sample_files.append(all_rep_save_file)
 
-
     abs_path = os.path.abspath(out_path)
     print(f'[Done] Results are at [{abs_path}]')
 
@@ -281,6 +290,7 @@ def load_dataset(args, n_frames):
         args.num_frames = (args.min_seq_len, args.max_seq_len)
     else:
         args.num_frames = n_frames
+
     data = get_dataset_loader(name=args.dataset,
                               batch_size=args.batch_size,
                               num_frames=args.num_frames,
@@ -288,6 +298,7 @@ def load_dataset(args, n_frames):
                               load_mode='text_only',
                               short_db=args.short_db,
                               cropping_sampler=args.cropping_sampler)
+                              
     data.fixed_length = n_frames
     return data
 

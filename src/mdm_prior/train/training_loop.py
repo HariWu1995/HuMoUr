@@ -11,13 +11,13 @@ import numpy as np
 import torch
 from torch.optim import AdamW
 
-from diffusion import logger
-from diffusion.fp16_util import MixedPrecisionTrainer
-from diffusion.resample import LossAwareSampler, UniformSampler
-from diffusion.resample import create_named_schedule_sampler
-
 from utils.misc import load_model_wo_clip
 from utils import dist_util
+
+from src.mdm_prior.diffusion import logger
+from src.mdm_prior.diffusion.fp16_util import MixedPrecisionTrainer
+from src.mdm_prior.diffusion.resample import LossAwareSampler, UniformSampler
+from src.mdm_prior.diffusion.resample import create_named_schedule_sampler
 
 from src.mdm_prior.eval import eval_humanml_double_take, eval_multi
 from src.mdm_prior.data_loaders.get_data import get_dataset_loader

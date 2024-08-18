@@ -13,8 +13,8 @@ import torch
 import torch as th
 from copy import deepcopy
 
-from diffusion.nn import mean_flat, sum_flat
-from diffusion.losses import normal_kl, discretized_gaussian_log_likelihood
+from src.mdm_prior.diffusion.nn import mean_flat, sum_flat
+from src.mdm_prior.diffusion.losses import normal_kl, discretized_gaussian_log_likelihood
 
 from src.mdm_prior.data_loaders.humanml.scripts import motion_process
 from src.mdm_prior.data_loaders.amass.transforms.smpl import SlimSMPLTransform
@@ -205,7 +205,11 @@ class GaussianDiffusion:
 
         self.l2_loss = lambda a, b: (a - b) ** 2  # th.nn.MSELoss(reduction='none')  # must be None for handling mask later on.
 
-        if self.lambda_rcxyz or self.lambda_vel_rcxyz or self.lambda_fc or self.lambda_vel:  # TODO - for Babel dataset only
+        # TODO - for Babel dataset only
+        if self.lambda_rcxyz \
+        or self.lambda_vel_rcxyz \
+        or self.lambda_fc \
+        or self.lambda_vel:  
             self.transform = SlimSMPLTransform(batch_size=batch_size, name='SlimSMPLTransform', 
                                                 ename='smplnh', normalization=True)  # data_loader.dataset.transform
             self.Datastruct = self.transform.SlimDatastruct

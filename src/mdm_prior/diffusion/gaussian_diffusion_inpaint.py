@@ -1,7 +1,7 @@
 import torch as th
 
-from diffusion.respace import SpacedDiffusion
-from .gaussian_diffusion import _extract_into_tensor
+from src.mdm_prior.diffusion.respace import SpacedDiffusion
+from src.mdm_prior.diffusion.gaussian_diffusion import _extract_into_tensor
 
 
 class GaussianDiffusionInpainting(SpacedDiffusion):

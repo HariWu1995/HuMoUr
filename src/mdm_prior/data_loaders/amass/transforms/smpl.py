@@ -35,7 +35,7 @@ class SMPLTransform(Transform):
                  joints2jfeats: Joints2Jfeats = None, **kwargs):
 
         if rots2rfeats == None:
-            rots2rfeats = Globalvelandy(path='./data_loaders/amass/transforms/rots2rfeats/globalvelandy/rot6d/babel-amass/separate_pairs',
+            rots2rfeats = Globalvelandy(path='./src/mdm_prior/data_loaders/amass/transforms/rots2rfeats/globalvelandy/rot6d/babel-amass/separate_pairs',
                                         normalization=True,
                                         pose_rep='rot6d',
                                         canonicalize=True,
@@ -69,10 +69,10 @@ class SMPLTransform(Transform):
 class SlimSMPLTransform(Transform):
 
     def __init__(self, batch_size=16, rots2rfeats: Rots2Rfeats = None,
-                 rots2joints: Rots2Joints = None,
-                 **kwargs):
+                 rots2joints: Rots2Joints = None, **kwargs):
+
         if rots2rfeats == None:
-            rots2rfeats = Globalvelandy(path='./data_loaders/amass/transforms/rots2rfeats/globalvelandy/rot6d/babel-amass/separate_pairs',
+            rots2rfeats = Globalvelandy(path='./src/mdm_prior/data_loaders/amass/transforms/rots2rfeats/globalvelandy/rot6d/babel-amass/separate_pairs',
                                         normalization=True,
                                         pose_rep='rot6d',
                                         canonicalize=kwargs.get("canonicalize", True),

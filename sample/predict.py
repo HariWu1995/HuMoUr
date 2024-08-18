@@ -7,18 +7,18 @@ import torch
 
 from cog import BasePredictor, Input, Path, BaseModel
 
-import data_loaders.humanml.utils.paramUtil as paramUtil
-from data_loaders.tensors import collate
-from data_loaders.get_data import get_dataset_loader
-from data_loaders.humanml.utils.plot_script import plot_3d_motion
-from data_loaders.humanml.scripts.motion_process import recover_from_ric
-
 from utils import dist_util
-from utils.model_util import create_model_and_diffusion, load_model_wo_clip
 
-from model.cfg_sampler import ClassifierFreeSampleModel
-from sample.generate import construct_template_variables
-from visualize.motions2hik import motions2hik
+import src.mdm.data_loaders.humanml.utils.paramUtil as paramUtil
+from src.mdm.data_loaders.tensors import collate
+from src.mdm.data_loaders.get_data import get_dataset_loader
+from src.mdm.data_loaders.humanml.utils.plot_script import plot_3d_motion
+from src.mdm.data_loaders.humanml.scripts.motion_process import recover_from_ric
+
+from src.mdm.sample.generate import construct_template_variables
+from src.mdm.utils.model_util import create_model_and_diffusion, load_model_wo_clip
+from src.mdm.model.cfg_sampler import ClassifierFreeSampleModel
+from src.mdm.visualize.motions2hik import motions2hik
 
 """
 In case of matplotlib issues,

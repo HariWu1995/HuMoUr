@@ -1,10 +1,10 @@
 from datetime import datetime
 from collections import OrderedDict
 
-from diffusion import logger
-
 from utils import dist_util
 from utils.seeding import fix_seed
+
+from src.mdm_prior.diffusion import logger
 
 from src.mdm_prior.model.DoubleTake_MDM import doubleTake_MDM
 from src.mdm_prior.model.mdm import MDM

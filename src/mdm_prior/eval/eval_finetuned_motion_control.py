@@ -1,12 +1,12 @@
 from datetime import datetime
 from collections import OrderedDict
 
-from diffusion import logger
-from diffusion.respace import SpacedDiffusion
-from diffusion.gaussian_diffusion_inpaint import GaussianDiffusionInpainting
-
 from utils import dist_util
 from utils.seeding import fix_seed
+
+from src.mdm_prior.diffusion import logger
+from src.mdm_prior.diffusion.respace import SpacedDiffusion
+from src.mdm_prior.diffusion.gaussian_diffusion_inpaint import GaussianDiffusionInpainting
 
 from src.mdm_prior.data_loaders.get_data import get_dataset_loader
 from src.mdm_prior.data_loaders.humanml.utils.utils import *

@@ -10,16 +10,17 @@ import torch
 
 from utils import dist_util
 from utils.seeding import fix_seed
-from utils.parser_util import edit_multi_args
-from utils.model_util import load_model
 
-from model.comMDM import ComMDM
-from model.cfg_sampler import UnconditionedModel
+from src.mdm_prior.utils.parser_util import edit_multi_args
+from src.mdm_prior.utils.model_util import load_model
 
-import data_loaders.humanml.utils.paramUtil as paramUtil
-from data_loaders import humanml_utils
-from data_loaders.get_data import get_dataset_loader
-from data_loaders.humanml.utils.plot_script import plot_3d_motion
+from src.mdm_prior.model.comMDM import ComMDM
+from src.mdm_prior.model.cfg_sampler import UnconditionedModel
+
+import src.mdm_prior.data_loaders.humanml.utils.paramUtil as paramUtil
+from src.mdm_prior.data_loaders import humanml_utils
+from src.mdm_prior.data_loaders.get_data import get_dataset_loader
+from src.mdm_prior.data_loaders.humanml.utils.plot_script import plot_3d_motion
 
 from eval.eval_multi import extract_motions
 

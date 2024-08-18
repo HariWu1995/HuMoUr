@@ -1,8 +1,8 @@
 import torch
 
-from diffusion import gaussian_diffusion as gd
-from diffusion.respace import SpacedDiffusion, space_timesteps
-from diffusion.gaussian_diffusion_inpaint import GaussianDiffusionInpainting
+from src.mdm_prior.diffusion import gaussian_diffusion as gd
+from src.mdm_prior.diffusion.respace import SpacedDiffusion, space_timesteps
+from src.mdm_prior.diffusion.gaussian_diffusion_inpaint import GaussianDiffusionInpainting
 
 from src.mdm_prior.model.mdm import MDM
 from src.mdm_prior.model.comMDM import ComMDM

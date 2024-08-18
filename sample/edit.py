@@ -28,7 +28,6 @@ def main():
     args = edit_args()
     fix_seed(args.seed)
 
-    out_path = args.output_dir
     name = os.path.basename(os.path.dirname(args.model_path))
     niter = os.path.basename(args.model_path).replace('model', '').replace('.pt', '')
     
@@ -36,6 +35,7 @@ def main():
     fps = 12.5 if args.dataset == 'kit' else 20
     dist_util.setup_dist(args.device)
     
+    out_path = args.output_dir
     if out_path == '':
         out_path = os.path.join(os.path.dirname(args.model_path),
                                 'edit_{}_{}_{}_seed{}'.format(name, niter, args.edit_mode, args.seed))

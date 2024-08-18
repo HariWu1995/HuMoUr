@@ -59,6 +59,7 @@ class ScheduleSampler(ABC):
 
 
 class UniformSampler(ScheduleSampler):
+
     def __init__(self, diffusion):
         self.diffusion = diffusion
         self._weights = np.ones([diffusion.num_timesteps])
@@ -68,6 +69,7 @@ class UniformSampler(ScheduleSampler):
 
 
 class LossAwareSampler(ScheduleSampler):
+
     def update_with_local_losses(self, local_ts, local_losses):
         """
         Update the reweighting using losses from a model.
@@ -122,6 +124,7 @@ class LossAwareSampler(ScheduleSampler):
 
 
 class LossSecondMomentResampler(LossAwareSampler):
+    
     def __init__(self, diffusion, history_per_term=10, uniform_prob=0.001):
         self.diffusion = diffusion
         self.history_per_term = history_per_term
