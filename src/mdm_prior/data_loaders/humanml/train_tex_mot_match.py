@@ -17,6 +17,9 @@ from src.mdm_prior.data_loaders.humanml.scripts.motion_process import *
 from src.mdm_prior.data_loaders.humanml.utils.word_vectorizer import WordVectorizer, POS_enumerator
 
 
+DEPENDENCIES_DIR = os.environ.get('DEPENDENCIES_DIR', '.')
+
+
 def build_models(opt):
     movement_enc = MovementConvEncoder(opt.dim_pose - opt.foot_contact_entries, opt.dim_movement_enc_hidden, opt.dim_movement_latent)
     text_enc = TextEncoderBiGRUCo(word_size=dim_word,
@@ -120,7 +123,7 @@ if __name__ == '__main__':
                                         batch_size=opt.batch_size, num_frames=480,  # not in use
                                         split='val', load_mode='evaluator_train', opt=opt)
     else:
-        w_vectorizer = WordVectorizer('./glove', 'our_vab')
+        w_vectorizer = WordVectorizer(f'{DEPENDENCIES_DIR}/glove', 'our_vab')
         mean = np.load(pjoin(meta_root, 'mean.npy'))
         std = np.load(pjoin(meta_root, 'std.npy'))
 

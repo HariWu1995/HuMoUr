@@ -1,3 +1,4 @@
+import os
 from os.path import join as pjoin
 
 import numpy as np
@@ -6,6 +7,9 @@ from torch.utils.data import DataLoader
 from t2m.data.dataset import Text2MotionDatasetV2, collate_fn
 from t2m.utils.get_opt import get_opt
 from t2m.utils.word_vectorizer import WordVectorizer
+
+
+DEPENDENCIES_DIR = os.environ.get('DEPENDENCIES_DIR', '.')
 
 
 def get_dataset_motion_loader(opt_path, batch_size, device):
@@ -18,7 +22,7 @@ def get_dataset_motion_loader(opt_path, batch_size, device):
         mean = np.load(pjoin(opt.meta_dir, 'mean.npy'))
         std = np.load(pjoin(opt.meta_dir, 'std.npy'))
 
-        w_vectorizer = WordVectorizer('./glove', 'our_vab')
+        w_vectorizer = WordVectorizer(f'{DEPENDENCIES_DIR}/glove', 'our_vab')
         split_file = pjoin(opt.data_root, 'test.txt')
         dataset = Text2MotionDatasetV2(opt, mean, std, split_file, w_vectorizer)
         dataloader = DataLoader(dataset, batch_size=batch_size, num_workers=4, drop_last=True,
