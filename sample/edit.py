@@ -91,15 +91,16 @@ def main():
         for i, length in enumerate(model_kwargs['y']['lengths'].cpu().numpy()):
             start_idx, end_idx = int(args.prefix_end * length), int(args.suffix_start * length)
             gt_frames_per_sample[i] = list(range(0, start_idx)) + list(range(end_idx, max_frames))
-            model_kwargs['y']['inpainting_mask'][i, :, :,
-            start_idx: end_idx] = False  # do inpainting in those frames
+            model_kwargs['y']['inpainting_mask'][i, :, :, start_idx:end_idx] = False  # do inpainting in those frames
 
     elif args.edit_mode == 'upper_body':
         model_kwargs['y']['inpainting_mask'] = torch.tensor(humanml_utils.HML_LOWER_BODY_MASK, dtype=torch.bool,
                                                             device=input_motions.device)  # True is lower body data
-        model_kwargs['y']['inpainting_mask'] = model_kwargs['y']['inpainting_mask'].unsqueeze(0).unsqueeze(
-            -1).unsqueeze(-1).repeat(input_motions.shape[0], 1, input_motions.shape[2], input_motions.shape[3])
-
+        model_kwargs['y']['inpainting_mask'] = \
+        model_kwargs['y']['inpainting_mask'].unsqueeze(0).unsqueeze(-1).unsqueeze(-1)\
+                                            .repeat(input_motions.shape[0], 1, 
+                                                    input_motions.shape[2], 
+                                                    input_motions.shape[3])
     all_motions = []
     all_lengths = []
     all_text = []
@@ -153,8 +154,10 @@ def main():
                         'lengths': all_lengths,
                         'num_samples': args.num_samples, 
                         'num_repetitions': args.num_repetitions, })
+
     with open(npy_path.replace('.npy', '.txt'), 'w') as fw:
         fw.write('\n'.join(all_text))
+
     with open(npy_path.replace('.npy', '_len.txt'), 'w') as fw:
         fw.write('\n'.join([str(l) for l in all_lengths]))
 
@@ -171,6 +174,7 @@ def main():
         caption = 'Input Motion'
         length = model_kwargs['y']['lengths'][sample_i]
         motion = input_motions[sample_i].transpose(2, 0, 1)[:length]
+
         save_file = 'input_motion{:02d}.mp4'.format(sample_i)
         animation_save_path = os.path.join(out_path, save_file)
         rep_files = [animation_save_path]
@@ -192,6 +196,7 @@ def main():
             save_file = 'sample{:02d}_rep{:02d}.mp4'.format(sample_i, rep_i)
             animation_save_path = os.path.join(out_path, save_file)
             rep_files.append(animation_save_path)
+            
             print(f'[({sample_i}) "{caption}" | Rep #{rep_i} | -> {save_file}]')
             plot_3d_motion(animation_save_path, skeleton, motion, title=caption,
                            dataset=args.dataset, fps=fps, vis_mode=args.edit_mode,
