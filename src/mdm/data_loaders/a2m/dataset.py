@@ -2,8 +2,8 @@ import random
 
 import numpy as np
 import torch
-
-from data_loaders.tensors import collate
+        
+from src.mdm.data_loaders.tensors import collate
 from utils.misc import to_torch
 import utils.rotation_conversions as geometry
 # from utils.action_label_to_idx import action_label_to_idx
@@ -26,11 +26,11 @@ class Dataset(torch.utils.data.Dataset):
         self.min_len = min_len
         self.num_seq_max = num_seq_max
 
+        self.only_60_classes = kwargs.get('only_60_classes', False)
+        self.use_only_15_classes = kwargs.get('use_only_15_classes', False)
+        self.leave_out_15_classes = kwargs.get('leave_out_15_classes', False)
         self.align_pose_frontview = kwargs.get('align_pose_frontview', False)
         self.use_action_cat_as_text_labels = kwargs.get('use_action_cat_as_text_labels', False)
-        self.only_60_classes = kwargs.get('only_60_classes', False)
-        self.leave_out_15_classes = kwargs.get('leave_out_15_classes', False)
-        self.use_only_15_classes = kwargs.get('use_only_15_classes', False)
 
         if self.split not in ["train", "val", "test"]:
             raise ValueError(f"{self.split} is not a valid split")
@@ -114,6 +114,7 @@ class Dataset(torch.utils.data.Dataset):
                 if not self.glob:
                     pose = pose[:, 1:, :]
                 pose = to_torch(pose)
+
                 if self.align_pose_frontview:
                     first_frame_root_pose_matrix = geometry.axis_angle_to_matrix(pose[0][0])
                     all_root_poses_matrix = geometry.axis_angle_to_matrix(pose[:, 0, :])
@@ -134,10 +135,12 @@ class Dataset(torch.utils.data.Dataset):
                     ret = geometry.axis_angle_to_quaternion(pose)
                 elif pose_rep == "rot6d":
                     ret = geometry.matrix_to_rotation_6d(geometry.axis_angle_to_matrix(pose))
+
         if pose_rep != "xyz" and self.translation:
             padded_tr = torch.zeros((ret.shape[0], ret.shape[2]), dtype=ret.dtype)
             padded_tr[:, :3] = ret_tr
             ret = torch.cat((ret, padded_tr[:, None]), 1)
+
         ret = ret.permute(1, 2, 0).contiguous()
         return ret.float()
 
@@ -154,7 +157,6 @@ class Dataset(torch.utils.data.Dataset):
                     max_frame = min(nframes, self.max_len)
                 else:
                     max_frame = nframes
-
                 num_frames = random.randint(self.min_len, max(max_frame, self.min_len))
             else:
                 num_frames = self.num_frames if self.num_frames != -1 else self.max_len
@@ -163,17 +165,14 @@ class Dataset(torch.utils.data.Dataset):
                 fair = False  # True
                 if fair:
                     # distills redundancy everywhere
-                    choices = np.random.choice(range(nframes),
-                                               num_frames,
-                                               replace=True)
+                    choices = np.random.choice(range(nframes), num_frames, replace=True)
                     frame_ix = sorted(choices)
                 else:
                     # adding the last frame until done
                     ntoadd = max(0, num_frames - nframes)
                     lastframe = nframes - 1
                     padding = lastframe * np.ones(ntoadd, dtype=int)
-                    frame_ix = np.concatenate((np.arange(0, nframes),
-                                               padding))
+                    frame_ix = np.concatenate((np.arange(0, nframes), padding))
 
             elif self.sampling in ["conseq", "random_conseq"]:
                 step_max = (nframes - 1) // (num_frames - 1)
@@ -191,9 +190,7 @@ class Dataset(torch.utils.data.Dataset):
                 frame_ix = shift + np.arange(0, lastone + 1, step)
 
             elif self.sampling == "random":
-                choices = np.random.choice(range(nframes),
-                                           num_frames,
-                                           replace=False)
+                choices = np.random.choice(range(nframes), num_frames, replace=False)
                 frame_ix = sorted(choices)
 
             else:

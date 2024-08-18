@@ -1,12 +1,13 @@
 import os
-from tqdm import tqdm
-import numpy as np
 import pickle as pkl
-import utils.rotation_conversions as geometry
+from tqdm import tqdm
+
+import numpy as np
 import torch
+# from torch.utils.data import Dataset
 
 from .dataset import Dataset
-# from torch.utils.data import Dataset
+import utils.rotation_conversions as geometry
 
 action2motion_joints = [8, 1, 2, 3, 4, 5, 6, 7, 0, 9, 10, 11, 12, 13, 14, 21, 24, 38]
 
@@ -44,6 +45,7 @@ def get_trans_from_vibe(vibe, index, use_z=True):
             z = 0
         trans = [x, y, z]
         alltrans.append(trans)
+
     alltrans = np.array(alltrans)
     return alltrans - alltrans[0]
 
@@ -68,9 +70,10 @@ class UESTC(Dataset):
         # Out of 118 subjects -> 51 training, 67 in test
         all_subjects = np.arange(1, 119)
         self._tr_subjects = [
-            1, 2, 6, 12, 13, 16, 21, 24, 28, 29, 30, 31, 33, 35, 39, 41, 42, 45, 47, 50,
-            52, 54, 55, 57, 59, 61, 63, 64, 67, 69, 70, 71, 73, 77, 81, 84, 86, 87, 88,
-            90, 91, 93, 96, 99, 102, 103, 104, 107, 108, 112, 113]
+            1, 2, 6, 12, 13, 16, 21, 24, 28, 29, 30, 31, 33, 35, 39, 41, 42, 45, 
+            47, 50, 52, 54, 55, 57, 59, 61, 63, 64, 67, 69, 70, 71, 73, 77, 81, 
+            84, 86, 87, 88, 90, 91, 93, 96, 99, 102, 103, 104, 107, 108, 112, 113,
+        ]
         self._test_subjects = [s for s in all_subjects if s not in self._tr_subjects]
 
         # Load names of 25600 videos
@@ -94,8 +97,10 @@ class UESTC(Dataset):
                 for index in tqdm(range(len(self._pose))):
                     self._globtrans.append(get_trans_from_vibe(vibe_data, index, use_z=True))
                 pkl.dump(self._globtrans, open("globtrans_usez.pkl", "wb"))
+
             self._joints = vibe_data["joints3d"]
             self._jointsIx = action2motion_joints
+    
         else:
             raise ValueError("This method name is not recognized.")
 
@@ -139,9 +144,11 @@ class UESTC(Dataset):
                                       "view": view,
                                       "subject": subject,
                                       "side": side})
+
             if self.view == "frontview":
                 if side != 1:
                     continue
+
             # rotate to front view
             if side != 1:
                 # don't take the view 8 in side 2
@@ -188,8 +195,8 @@ class UESTC(Dataset):
 
     def _load_joints3D(self, ind, frame_ix):
         if len(self._joints[ind]) == 0:
-            raise ValueError(
-                f"Cannot load index {ind} in _load_joints3D function.")
+            raise ValueError(f"Cannot load index {ind} in _load_joints3D function.")
+
         if self._jointsIx is not None:
             joints3D = self._joints[ind][frame_ix][:, self._jointsIx]
         else:

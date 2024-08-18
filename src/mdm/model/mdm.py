@@ -4,7 +4,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import clip
 
-from model.rotation2xyz import Rotation2xyz
+from src.mdm.model.rotation2xyz import Rotation2xyz
 
 
 class MDM(nn.Module):

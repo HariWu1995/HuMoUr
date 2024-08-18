@@ -4,16 +4,15 @@ from tqdm import tqdm
 import codecs as cs
 
 import random
-import torch
-from torch.utils import data
 import numpy as np
 import spacy
 
+import torch
+from torch.utils import data
 from torch.utils.data._utils.collate import default_collate
-from data_loaders.humanml.utils.get_opt import get_opt
-from data_loaders.humanml.utils.word_vectorizer import WordVectorizer
 
-# import spacy
+from src.mdm.data_loaders.humanml.utils.get_opt import get_opt
+from src.mdm.data_loaders.humanml.utils.word_vectorizer import WordVectorizer
 
 
 def collate_fn(batch):
@@ -48,6 +47,7 @@ class Text2MotionDataset(data.Dataset):
                 motion = np.load(pjoin(opt.motion_dir, name + '.npy'))
                 if (len(motion)) < min_motion_len or (len(motion) >= 200):
                     continue
+
                 text_data = []
                 flag = False
                 with cs.open(pjoin(opt.text_dir, name + '.txt')) as f:
@@ -158,12 +158,14 @@ class Text2MotionDataset(data.Dataset):
             tokens = tokens[:self.opt.max_text_len]
             tokens = ['sos/OTHER'] + tokens + ['eos/OTHER']
             sent_len = len(tokens)
+
         pos_one_hots = []
         word_embeddings = []
         for token in tokens:
             word_emb, pos_oh = self.w_vectorizer[token]
             pos_one_hots.append(pos_oh[None, :])
             word_embeddings.append(word_emb[None, :])
+
         pos_one_hots = np.concatenate(pos_one_hots, axis=0)
         word_embeddings = np.concatenate(word_embeddings, axis=0)
 
@@ -171,20 +173,24 @@ class Text2MotionDataset(data.Dataset):
 
         if self.opt.is_train:
             if m_length != self.max_length:
+
                 # print("Motion original length: %d_%d" % (m_length, len(motion)))
                 if self.opt.unit_length < 10:
                     coin2 = np.random.choice(['single', 'single', 'double'])
                 else:
                     coin2 = 'single'
+
                 if len_gap == 0 or (len_gap == 1 and coin2 == 'double'):
                     m_length = self.max_length
                     idx = random.randint(0, m_length - self.max_length)
                     motion = motion[idx:idx+self.max_length]
+
                 else:
                     if coin2 == 'single':
                         n_m_length = self.max_length + self.opt.unit_length * len_gap
                     else:
                         n_m_length = self.max_length + self.opt.unit_length * (len_gap - 1)
+                    
                     idx = random.randint(0, m_length - n_m_length)
                     motion = motion[idx:idx + self.max_length]
                     m_length = n_m_length
@@ -199,10 +205,11 @@ class Text2MotionDataset(data.Dataset):
                 m_length = (m_length // self.opt.unit_length - 1) * self.opt.unit_length
             elif coin2 == 'single':
                 m_length = (m_length // self.opt.unit_length) * self.opt.unit_length
+
             idx = random.randint(0, len(motion) - m_length)
             motion = motion[idx:idx+m_length]
 
-        "Z Normalization"
+        # Z-Normalization
         motion = (motion - self.mean) / self.std
 
         return word_embeddings, pos_one_hots, caption, sent_len, motion, m_length
@@ -235,6 +242,7 @@ class Text2MotionDatasetV2(data.Dataset):
                 motion = np.load(pjoin(opt.motion_dir, name + '.npy'))
                 if (len(motion)) < min_motion_len or (len(motion) >= 200):
                     continue
+
                 text_data = []
                 flag = False
                 with cs.open(pjoin(opt.text_dir, name + '.txt')) as f:
@@ -327,6 +335,7 @@ class Text2MotionDatasetV2(data.Dataset):
             word_emb, pos_oh = self.w_vectorizer[token]
             pos_one_hots.append(pos_oh[None, :])
             word_embeddings.append(word_emb[None, :])
+
         pos_one_hots = np.concatenate(pos_one_hots, axis=0)
         word_embeddings = np.concatenate(word_embeddings, axis=0)
 
@@ -340,16 +349,18 @@ class Text2MotionDatasetV2(data.Dataset):
             m_length = (m_length // self.opt.unit_length - 1) * self.opt.unit_length
         elif coin2 == 'single':
             m_length = (m_length // self.opt.unit_length) * self.opt.unit_length
+
         idx = random.randint(0, len(motion) - m_length)
         motion = motion[idx:idx+m_length]
 
-        "Z Normalization"
+        # Z-Normalization
         motion = (motion - self.mean) / self.std
 
         if m_length < self.max_motion_length:
-            motion = np.concatenate([motion,
-                                     np.zeros((self.max_motion_length - m_length, motion.shape[1]))
-                                     ], axis=0)
+            motion = np.concatenate([
+                        motion,
+                        np.zeros((self.max_motion_length - m_length, motion.shape[1]))
+                    ], axis=0)
         # print(word_embeddings.shape, motion.shape)
         # print(tokens)
         return word_embeddings, pos_one_hots, caption, sent_len, motion, m_length, '_'.join(tokens)
@@ -475,6 +486,7 @@ class Text2MotionDatasetBaseline(data.Dataset):
             word_emb, pos_oh = self.w_vectorizer[token]
             pos_one_hots.append(pos_oh[None, :])
             word_embeddings.append(word_emb[None, :])
+
         pos_one_hots = np.concatenate(pos_one_hots, axis=0)
         word_embeddings = np.concatenate(word_embeddings, axis=0)
 
@@ -486,6 +498,7 @@ class Text2MotionDatasetBaseline(data.Dataset):
                 coin2 = np.random.choice(['single', 'single', 'double'])
             else:
                 coin2 = 'single'
+
             if len_gap == 0 or (len_gap == 1 and coin2 == 'double'):
                 m_length = self.max_length
                 s_idx = random.randint(0, m_length - self.max_length)
@@ -502,14 +515,15 @@ class Text2MotionDatasetBaseline(data.Dataset):
         src_motion = motion[s_idx: s_idx + m_length]
         tgt_motion = motion[s_idx: s_idx + self.max_length]
 
-        "Z Normalization"
+        # Z-Normalization
         src_motion = (src_motion - self.mean) / self.std
         tgt_motion = (tgt_motion - self.mean) / self.std
 
         if m_length < self.max_motion_length:
-            src_motion = np.concatenate([src_motion,
-                                     np.zeros((self.max_motion_length - m_length, motion.shape[1]))
-                                     ], axis=0)
+            src_motion = np.concatenate([
+                            src_motion,
+                            np.zeros((self.max_motion_length - m_length, motion.shape[1]))
+                        ], axis=0)
         # print(m_length, src_motion.shape, tgt_motion.shape)
         # print(word_embeddings.shape, motion.shape)
         # print(tokens)
@@ -583,8 +597,10 @@ class MotionDatasetV2(data.Dataset):
         else:
             motion_id = 0
             idx = 0
+        
         motion = self.data[motion_id][idx:idx+self.opt.window_size]
-        "Z Normalization"
+        
+        # Z-Normalization
         motion = (motion - self.mean) / self.std
 
         return motion
@@ -652,6 +668,7 @@ class RawTextDataset(data.Dataset):
             word_emb, pos_oh = self.w_vectorizer[token]
             pos_one_hots.append(pos_oh[None, :])
             word_embeddings.append(word_emb[None, :])
+            
         pos_one_hots = np.concatenate(pos_one_hots, axis=0)
         word_embeddings = np.concatenate(word_embeddings, axis=0)
 

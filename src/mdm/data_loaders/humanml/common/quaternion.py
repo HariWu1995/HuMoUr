@@ -8,9 +8,10 @@
 import torch
 import numpy as np
 
-_EPS4 = np.finfo(float).eps * 4.0
 
+_EPS4 = np.finfo(float).eps * 4.0
 _FLOAT_EPS = np.finfo(np.float).eps
+
 
 # PyTorch-backed implementations
 def qinv(q):
@@ -124,7 +125,6 @@ def qeuler(q, order, epsilon=0, deg=True):
 
 
 # Numpy-backed implementations
-
 def qmul_np(q, r):
     q = torch.from_numpy(q).contiguous().float()
     r = torch.from_numpy(r).contiguous().float()
@@ -283,20 +283,17 @@ def quaternion_to_matrix(quaternions):
     r, i, j, k = torch.unbind(quaternions, -1)
     two_s = 2.0 / (quaternions * quaternions).sum(-1)
 
-    o = torch.stack(
-        (
+    o = torch.stack((
             1 - two_s * (j * j + k * k),
-            two_s * (i * j - k * r),
-            two_s * (i * k + j * r),
-            two_s * (i * j + k * r),
+                two_s * (i * j - k * r),
+                two_s * (i * k + j * r),
+                two_s * (i * j + k * r),
             1 - two_s * (i * i + k * k),
-            two_s * (j * k - i * r),
-            two_s * (i * k - j * r),
-            two_s * (j * k + i * r),
-            1 - two_s * (i * i + j * j),
-        ),
-        -1,
-    )
+                two_s * (j * k - i * r),
+                two_s * (i * k - j * r),
+                two_s * (j * k + i * r),
+            1 - two_s * (i * i + j * j),), -1,)
+
     return o.reshape(quaternions.shape[:-1] + (3, 3))
 
 
@@ -342,7 +339,8 @@ def cont6d_to_matrix_np(cont6d):
 
 
 def qpow(q0, t, dtype=torch.float):
-    ''' q0 : tensor of quaternions
+    ''' 
+    q0 : tensor of quaternions
     t: tensor of powers
     '''
     q0 = qnormalize(q0)
@@ -375,7 +373,6 @@ def qslerp(q0, q1, t):
     Returns:
     Tensor of Slerps: t.shape + q0.shape
     '''
-
     q0 = qnormalize(q0)
     q1 = qnormalize(q1)
     q_ = qpow(qmul(q1, qinv(q0)), t)

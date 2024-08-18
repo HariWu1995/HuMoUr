@@ -43,6 +43,7 @@ class Graph:
         return self.A
 
     def get_edge(self, layout):
+
         if layout == 'openpose':
             # self.num_node = 18
             self.num_node = 15
@@ -59,6 +60,7 @@ class Graph:
                              (8, 1),]
             self.edge = self_link + neighbor_link
             self.center = 1
+
         elif layout == 'smpl':
             self.num_node = 24
             self_link = [(i, i) for i in range(self.num_node)]
@@ -66,6 +68,7 @@ class Graph:
             neighbor_link = [(k, kt[1][i + 1]) for i, k in enumerate(kt[0][1:])]
             self.edge = self_link + neighbor_link
             self.center = 0
+
         elif layout == 'smpl_noglobal':
             self.num_node = 23
             self_link = [(i, i) for i in range(self.num_node)]
@@ -76,6 +79,7 @@ class Graph:
             neighbor_link = [(i - 1, j - 1) for (i, j) in neighbor_1base]
             self.edge = self_link + neighbor_link
             self.center = 0
+
         elif layout == 'ntu-rgb+d':
             self.num_node = 25
             self_link = [(i, i) for i in range(self.num_node)]
@@ -87,6 +91,7 @@ class Graph:
             neighbor_link = [(i - 1, j - 1) for (i, j) in neighbor_1base]
             self.edge = self_link + neighbor_link
             self.center = 21 - 1
+
         elif layout == 'ntu_edge':
             self.num_node = 24
             self_link = [(i, i) for i in range(self.num_node)]
@@ -98,8 +103,10 @@ class Graph:
             neighbor_link = [(i - 1, j - 1) for (i, j) in neighbor_1base]
             self.edge = self_link + neighbor_link
             self.center = 2
+
         # elif layout=='customer settings'
         #     pass
+
         else:
             raise NotImplementedError("This Layout is not supported")
 
@@ -114,11 +121,13 @@ class Graph:
             A = np.zeros((1, self.num_node, self.num_node))
             A[0] = normalize_adjacency
             self.A = A
+            
         elif strategy == 'distance':
             A = np.zeros((len(valid_hop), self.num_node, self.num_node))
             for i, hop in enumerate(valid_hop):
                 A[i][self.hop_dis == hop] = normalize_adjacency[self.hop_dis == hop]
             self.A = A
+
         elif strategy == 'spatial':
             A = []
             for hop in valid_hop:
@@ -131,9 +140,7 @@ class Graph:
                             if self.hop_dis[j, self.center] == self.hop_dis[
                                     i, self.center]:
                                 a_root[j, i] = normalize_adjacency[j, i]
-                            elif self.hop_dis[j, self.
-                                              center] > self.hop_dis[i, self.
-                                                                     center]:
+                            elif self.hop_dis[j, self.center] > self.hop_dis[i, self.center]:
                                 a_close[j, i] = normalize_adjacency[j, i]
                             else:
                                 a_further[j, i] = normalize_adjacency[j, i]
@@ -142,8 +149,10 @@ class Graph:
                 else:
                     A.append(a_root + a_close)
                     A.append(a_further)
+
             A = np.stack(A)
             self.A = A
+
         else:
             raise NotImplementedError("This Strategy is not supported")
 
@@ -160,6 +169,7 @@ def get_hop_distance(num_node, edge, max_hop=1):
     arrive_mat = (np.stack(transfer_mat) > 0)
     for d in range(max_hop, -1, -1):
         hop_dis[arrive_mat[d]] = d
+        
     return hop_dis
 
 

@@ -1,13 +1,15 @@
 import torch
 import numpy as np
-from .accuracy import calculate_accuracy
+
 from .fid import calculate_fid
+from .accuracy import calculate_accuracy
 from .diversity import calculate_diversity_multimodality
 
-from eval.a2m.recognition.models.stgcn import STGCN
+from src.mdm.eval.a2m.recognition.models.stgcn import STGCN
 
 
 class Evaluation:
+
     def __init__(self, dataname, parameters, device, seed=None):
         layout = "smpl"  # if parameters["glob"] else "smpl_noglobal"
         model = STGCN(in_channels=parameters["nfeats"],
@@ -82,7 +84,7 @@ class Evaluation:
 
                 computedfeats[key] = {"feats": feats,
                                       "labels": labels,
-                                      "stats": stats}
+                                      "stats": stats,}
 
                 print_logs("diversity", key)
                 ret = calculate_diversity_multimodality(feats, labels, self.num_classes,

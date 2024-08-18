@@ -1,7 +1,9 @@
+from copy import deepcopy
+
 import numpy as np
 import torch
 import torch.nn as nn
-from copy import deepcopy
+
 
 # A wrapper model for Classifier-free guidance **SAMPLING** only
 # https://arxiv.org/abs/2207.12598

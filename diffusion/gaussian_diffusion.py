@@ -19,6 +19,7 @@ from diffusion.nn import mean_flat, sum_flat
 from diffusion.losses import normal_kl, discretized_gaussian_log_likelihood
 from data_loaders.humanml.scripts import motion_process
 
+
 def get_named_beta_schedule(schedule_name, num_diffusion_timesteps, scale_betas=1.):
     """
     Get a pre-defined beta schedule for the given name.

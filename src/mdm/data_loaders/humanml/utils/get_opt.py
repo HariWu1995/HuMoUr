@@ -4,19 +4,22 @@ from argparse import Namespace
 
 import re
 
-from data_loaders.humanml.utils.word_vectorizer import POS_enumerator
+from src.mdm.data_loaders.humanml.utils.word_vectorizer import POS_enumerator
 
 
 def is_float(numStr):
-    flag = False
     numStr = str(numStr).strip().lstrip('-').lstrip('+')    # 去除正数(+)、负数(-)符号
+
+    flag = False
     try:
         reg = re.compile(r'^[-+]?[0-9]+\.[0-9]+$')
         res = reg.match(str(numStr))
         if res:
             flag = True
+
     except Exception as ex:
         print("is_float() - error: " + str(ex))
+
     return flag
 
 

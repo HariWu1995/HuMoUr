@@ -1,14 +1,20 @@
 import torch
 import numpy as np
+
+from .fid import calculate_fid
 from .models import load_classifier, load_classifier_for_fid
 from .accuracy import calculate_accuracy
-from .fid import calculate_fid
 from .diversity import calculate_diversity_multimodality
 
 
 class A2MEvaluation:
+
     def __init__(self, device):
-        dataset_opt = {"input_size_raw": 72, "joints_num": 24, "num_classes": 12}
+        dataset_opt = {
+            "input_size_raw": 72, 
+                "joints_num": 24, 
+               "num_classes": 12,
+        }
         
         self.input_size_raw = dataset_opt["input_size_raw"]
         self.num_classes = dataset_opt["num_classes"]
@@ -26,9 +32,12 @@ class A2MEvaluation:
                 activations.append(self.gru_classifier_for_fid(batch["output_xyz"], lengths=batch["lengths"]))
                 if model.cond_mode != 'no_cond':
                     labels.append(batch["y"])
+
             activations = torch.cat(activations, dim=0)
+
             if model.cond_mode != 'no_cond':
                 labels = torch.cat(labels, dim=0)
+
         return activations, labels
 
     @staticmethod
@@ -52,27 +61,32 @@ class A2MEvaluation:
             mkey = f"{metric}_{key}"
             if model.cond_mode != 'no_cond':
                 metrics[mkey], _ = calculate_accuracy(model, loader,
-                                                  self.num_classes,
-                                                  self.gru_classifier, self.device)
+                                                    self.num_classes,
+                                                    self.gru_classifier, self.device)
             else:
                 metrics[mkey] = np.nan
 
             # features for diversity
             print_logs("features", key)
             feats, labels = self.compute_features(model, loader)
+
             print_logs("stats", key)
             stats = self.calculate_activation_statistics(feats)
             
-            computedfeats[key] = {"feats": feats,
-                                  "labels": labels,
-                                  "stats": stats}
+            computedfeats[key] = {
+                "feats": feats,
+                "labels": labels,
+                "stats": stats,
+            }
 
             print_logs("diversity", key)
+            
             ret = calculate_diversity_multimodality(feats, labels, self.num_classes, unconstrained=(model.cond_mode=='no_cond'))
             metrics[f"diversity_{key}"], metrics[f"multimodality_{key}"] = ret
             
         # taking the stats of the ground truth and remove it from the computed feats
         gtstats = computedfeats["gt"]["stats"]
+        
         # computing fid
         for key, loader in computedfeats.items():
             metric = "fid"

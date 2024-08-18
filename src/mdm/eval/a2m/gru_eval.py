@@ -1,31 +1,37 @@
-import copy
 import os
+import copy
+import functools
 
 import numpy as np
 from tqdm import tqdm
 import torch
-import functools
 from torch.utils.data import DataLoader
 
-from utils.fixseed import fixseed
-from data_loaders.tensors import collate
-from eval.a2m.action2motion.evaluate import A2MEvaluation
-from eval.unconstrained.evaluate import evaluate_unconstrained_metrics
-from .tools import save_metrics, format_metrics
 from utils import dist_util
+from utils.seeding import fix_seed
 
-num_samples_unconstrained = 1000
+from src.mdm.data_loaders.tensors import collate
+from src.mdm.eval.unconstrained.evaluate import evaluate_unconstrained_metrics
+from src.mdm.eval.a2m.action2motion.evaluate import A2MEvaluation
+from .tools import save_metrics, format_metrics
+
+
+num_samples_unconstrained = 1_000
+
 
 class NewDataloader:
+
     def __init__(self, mode, model, diffusion, dataiterator, device, unconstrained, num_samples: int=-1):
-        assert mode in ["gen", "gt"]
+        assert mode in ["gen", "gt"], f"{mode} is not supported!"
         self.batches = []
         sample_fn = diffusion.p_sample_loop
+
         with torch.no_grad():
             for motions, model_kwargs in tqdm(dataiterator, desc=f"Construct dataloader: {mode}.."):
                 motions = motions.to(device)
                 if num_samples != -1 and len(self.batches) * dataiterator.batch_size > num_samples:
                     continue  # do not break because it confuses the multiple loaders
+        
                 batch = dict()
                 if mode == "gen":
                     sample = sample_fn(model, motions.shape, clip_denoised=False, model_kwargs=model_kwargs)
@@ -52,6 +58,7 @@ class NewDataloader:
     def __iter__(self):
         return iter(self.batches)
 
+
 def evaluate(args, model, diffusion, data):
     num_frames = 60
 
@@ -61,7 +68,6 @@ def evaluate(args, model, diffusion, data):
     args.vertstrans = True
 
     device = dist_util.dev()
-
     model.eval()
 
     a2mevaluation = A2MEvaluation(device=device)
@@ -71,11 +77,10 @@ def evaluate(args, model, diffusion, data):
     datasetGT2 = copy.deepcopy(data)
 
     allseeds = list(range(args.num_seeds))
-
     try:
         for index, seed in enumerate(allseeds):
             print(f"Evaluation number: {index+1}/{args.num_seeds}")
-            fixseed(seed)
+            fix_seed(seed)
 
             datasetGT1.reset_shuffle()
             datasetGT1.shuffle()
@@ -90,14 +95,17 @@ def evaluate(args, model, diffusion, data):
 
             new_data_loader = functools.partial(NewDataloader, model=model, diffusion=diffusion, device=device,
                                                 unconstrained=args.unconstrained, num_samples=args.num_samples)
+           
             motionloader = new_data_loader(mode="gen", dataiterator=dataiterator)
             gt_motionloader = new_data_loader("gt", dataiterator=dataiterator)
             gt_motionloader2 = new_data_loader("gt", dataiterator=dataiterator2)
 
             # Action2motionEvaluation
-            loaders = {"gen": motionloader,
-                       "gt": gt_motionloader,
-                       "gt2": gt_motionloader2}
+            loaders = {
+                "gen": motionloader,
+                "gt": gt_motionloader,
+                "gt2": gt_motionloader2,
+            }
 
             a2mmetrics[seed] = a2mevaluation.evaluate(model, loaders)
 
@@ -108,14 +116,16 @@ def evaluate(args, model, diffusion, data):
             dataset_unconstrained.reset_shuffle()
             dataset_unconstrained.shuffle()
             dataiterator_unconstrained = DataLoader(dataset_unconstrained, batch_size=args.batch_size,
-                                           shuffle=False, num_workers=8, collate_fn=collate)
-            motionloader_unconstrained = new_data_loader(mode="gen", dataiterator=dataiterator_unconstrained, num_samples=num_samples_unconstrained)
+                                                    shuffle=False, num_workers=8, collate_fn=collate)
+            motionloader_unconstrained = new_data_loader(mode="gen", dataiterator=dataiterator_unconstrained, 
+                                                        num_samples=num_samples_unconstrained)
 
             generated_motions = []
             for motion in motionloader_unconstrained:
                 idx = [15, 12, 16, 18, 20, 17, 19, 21, 0, 1, 4, 7, 2, 5, 8]
                 motion = motion['output_xyz'][:, idx, :, :]
                 generated_motions.append(motion.cpu().numpy())
+                
             generated_motions = np.concatenate(generated_motions)
             unconstrained_metrics = evaluate_unconstrained_metrics(generated_motions, device, fast=True)
             unconstrained_metrics = {k+'_unconstrained': v for k, v in unconstrained_metrics.items()}

@@ -17,6 +17,7 @@ def calculate_diversity(activations):
     diversity /= diversity_times
     return diversity
 
+
 # from action2motion
 def calculate_diversity_multimodality(activations, labels, num_labels, unconstrained = False):
     diversity_times = 200

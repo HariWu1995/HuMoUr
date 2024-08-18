@@ -1,8 +1,10 @@
+import sys
+from tqdm import tqdm
+
 import torch
 import numpy as np
-from tqdm import tqdm
 from sklearn.metrics.pairwise import polynomial_kernel
-import sys
+
 
 # from: https://github.com/abdulfatir/gan-metrics-pytorch/blob/master/kid_score.py
 def polynomial_mmd_averages(codes_g, codes_r, n_subsets=50, subset_size=1000,
@@ -24,7 +26,9 @@ def polynomial_mmd_averages(codes_g, codes_r, n_subsets=50, subset_size=1000,
             else:
                 mmds[i] = o
             bar.set_postfix({'mean': mmds[:i+1].mean()})
+
     return (mmds, vars) if ret_var else mmds
+
 
 def polynomial_mmd(codes_g, codes_r, degree=3, gamma=None, coef0=1,
                    var_at_m=None, ret_var=True):
@@ -39,6 +43,7 @@ def polynomial_mmd(codes_g, codes_r, degree=3, gamma=None, coef0=1,
 
     return _mmd2_and_variance(K_XX, K_XY, K_YY,
                               var_at_m=var_at_m, ret_var=ret_var)
+
 
 def _mmd2_and_variance(K_XX, K_XY, K_YY, unit_diagonal=False,
                        mmd_est='unbiased', block_size=1024,
@@ -102,26 +107,27 @@ def _mmd2_and_variance(K_XX, K_XY, K_YY, unit_diagonal=False,
 
     m1 = m - 1
     m2 = m - 2
+
     zeta1_est = (
-        1 / (m * m1 * m2) * (
-            _sqn(Kt_XX_sums) - Kt_XX_2_sum + _sqn(Kt_YY_sums) - Kt_YY_2_sum)
+          1 / (m * m1 * m2) * (_sqn(Kt_XX_sums) - Kt_XX_2_sum + _sqn(Kt_YY_sums) - Kt_YY_2_sum)
         - 1 / (m * m1)**2 * (Kt_XX_sum**2 + Kt_YY_sum**2)
-        + 1 / (m * m * m1) * (
-            _sqn(K_XY_sums_1) + _sqn(K_XY_sums_0) - 2 * K_XY_2_sum)
+        + 1 / (m * m * m1) * (_sqn(K_XY_sums_1) + _sqn(K_XY_sums_0) - 2 * K_XY_2_sum)
         - 2 / m**4 * K_XY_sum**2
         - 2 / (m * m * m1) * (dot_XX_XY + dot_YY_YX)
         + 2 / (m**3 * m1) * (Kt_XX_sum + Kt_YY_sum) * K_XY_sum
     )
+
     zeta2_est = (
-        1 / (m * m1) * (Kt_XX_2_sum + Kt_YY_2_sum)
+          1 / (m * m1) * (Kt_XX_2_sum + Kt_YY_2_sum)
         - 1 / (m * m1)**2 * (Kt_XX_sum**2 + Kt_YY_sum**2)
         + 2 / (m * m) * K_XY_2_sum
         - 2 / m**4 * K_XY_sum**2
         - 4 / (m * m * m1) * (dot_XX_XY + dot_YY_YX)
         + 4 / (m**3 * m1) * (Kt_XX_sum + Kt_YY_sum) * K_XY_sum
     )
-    var_est = (4 * (var_at_m - 2) / (var_at_m * (var_at_m - 1)) * zeta1_est
-               + 2 / (var_at_m * (var_at_m - 1)) * zeta2_est)
+
+    var_est = (  4 * (var_at_m - 2) / (var_at_m * (var_at_m - 1)) * zeta1_est
+               + 2 / (var_at_m      *             (var_at_m - 1)) * zeta2_est)
 
     return mmd2, var_est
 
@@ -129,6 +135,7 @@ def _mmd2_and_variance(K_XX, K_XY, K_YY, unit_diagonal=False,
 def _sqn(arr):
     flat = np.ravel(arr)
     return flat.dot(flat)
+
 
 def calculate_kid(real_activations, generated_activations):
     kid_values = polynomial_mmd_averages(real_activations, generated_activations, n_subsets=100)

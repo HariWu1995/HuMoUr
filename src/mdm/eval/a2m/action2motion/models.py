@@ -1,9 +1,15 @@
+import os
 import torch
 import torch.nn as nn
 
 
+MODEL_PATH = os.environ.get("ACTION_RECOGNITION_HUMAN_ACT_12_POSES", 
+                            "./assets/actionrecognition/humanact12_gru.tar")
+
+
 # adapted from action2motion to take inputs of different lengths
 class MotionDiscriminator(nn.Module):
+
     def __init__(self, input_size, hidden_size, hidden_layer, device, output_size=12, use_noise=None):
         super(MotionDiscriminator, self).__init__()
         self.device = device
@@ -22,9 +28,11 @@ class MotionDiscriminator(nn.Module):
         bs, njoints, nfeats, num_frames = motion_sequence.shape
         motion_sequence = motion_sequence.reshape(bs, njoints*nfeats, num_frames)
         motion_sequence = motion_sequence.permute(2, 0, 1)
+
         if hidden_unit is None:
             # motion_sequence = motion_sequence.permute(1, 0, 2)
             hidden_unit = self.initHidden(motion_sequence.size(1), self.hidden_layer)
+        
         gru_o, _ = self.recurrent(motion_sequence.float(), hidden_unit)
 
         # select the last valid, instead of: gru_o[-1, :, :]
@@ -42,14 +50,17 @@ class MotionDiscriminator(nn.Module):
 
 
 class MotionDiscriminatorForFID(MotionDiscriminator):
+
     def forward(self, motion_sequence, lengths=None, hidden_unit=None):
         # dim (motion_length, num_samples, hidden_size)
         bs, njoints, nfeats, num_frames = motion_sequence.shape
         motion_sequence = motion_sequence.reshape(bs, njoints*nfeats, num_frames)
         motion_sequence = motion_sequence.permute(2, 0, 1)
+
         if hidden_unit is None:
             # motion_sequence = motion_sequence.permute(1, 0, 2)
             hidden_unit = self.initHidden(motion_sequence.size(1), self.hidden_layer)
+        
         gru_o, _ = self.recurrent(motion_sequence.float(), hidden_unit)
 
         # select the last valid, instead of: gru_o[-1, :, :]
@@ -61,11 +72,8 @@ class MotionDiscriminatorForFID(MotionDiscriminator):
         return lin1
 
 
-model_path = "./assets/actionrecognition/humanact12_gru.tar"
-
-
 def load_classifier(input_size_raw, num_classes, device):
-    model = torch.load(model_path, map_location=device)
+    model = torch.load(MODEL_PATH, map_location=device)
     classifier = MotionDiscriminator(input_size_raw, 128, 2, device=device, output_size=num_classes).to(device)
     classifier.load_state_dict(model["model"])
     classifier.eval()
@@ -73,7 +81,7 @@ def load_classifier(input_size_raw, num_classes, device):
 
 
 def load_classifier_for_fid(input_size_raw, num_classes, device):
-    model = torch.load(model_path, map_location=device)
+    model = torch.load(MODEL_PATH, map_location=device)
     classifier = MotionDiscriminatorForFID(input_size_raw, 128, 2, device=device, output_size=num_classes).to(device)
     classifier.load_state_dict(model["model"])
     classifier.eval()
@@ -82,20 +90,22 @@ def load_classifier_for_fid(input_size_raw, num_classes, device):
 
 def test():
     from src.datasets.ntu13 import NTU13
-    import src.utils.fixseed  # noqa
+    import utils.seeding  # noqa
 
     classifier = load_classifier("ntu13", input_size_raw=54, num_classes=13, device="cuda").eval()
-    params = {"pose_rep": "rot6d",
-              "translation": True,
-              "glob": True,
-              "jointstype": "a2m",
-              "vertstrans": True,
-              "num_frames": 60,
-              "sampling": "conseq",
-              "sampling_step": 1}
+    params = {
+           "pose_rep": "rot6d",
+        "translation": True,
+               "glob": True,
+         "vertstrans": True,
+         "jointstype": "a2m",
+         "num_frames": 60,
+           "sampling": "conseq",
+           "sampling_step": 1,
+    }
     dataset = NTU13(**params)
 
-    from src.models.rotation2xyz import Rotation2xyz
+    from utils.rotation2xyz import Rotation2xyz
     rot2xyz = Rotation2xyz(device="cuda")
     confusion_xyz = torch.zeros(13, 13, dtype=torch.long)
     confusion = torch.zeros(13, 13, dtype=torch.long)

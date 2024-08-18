@@ -1,18 +1,17 @@
 import copy
-import torch
-from tqdm import tqdm
 import functools
+from tqdm import tqdm
 
-from utils.fixseed import fixseed
-
-from eval.a2m.stgcn.evaluate import Evaluation as STGCNEvaluation
+import torch
 from torch.utils.data import DataLoader
 from data_loaders.tensors import collate
 
-
+from src.mdm.eval.a2m.stgcn.evaluate import Evaluation as STGCNEvaluation
 from .tools import format_metrics
-import utils.rotation_conversions as geometry
+
+from utils.seeding import fix_seed
 from utils import dist_util
+import utils.rotation_conversions as geometry
 
 
 def convert_x_to_rot6d(x, pose_rep):
@@ -32,8 +31,9 @@ def convert_x_to_rot6d(x, pose_rep):
 
 
 class NewDataloader:
+
     def __init__(self, mode, model, diffusion, dataiterator, device, cond_mode, dataset, num_samples):
-        assert mode in ["gen", "gt"]
+        assert mode in ["gen", "gt"], f"{mode} is not supported!"
 
         self.batches = []
         sample_fn = diffusion.p_sample_loop
@@ -41,8 +41,10 @@ class NewDataloader:
         with torch.no_grad():
             for motions, model_kwargs in tqdm(dataiterator, desc=f"Construct dataloader: {mode}.."):
                 motions = motions.to(device)
+                
                 if num_samples != -1 and len(self.batches) * dataiterator.batch_size > num_samples:
                     continue  # do not break because it confuses the multiple loaders
+                
                 batch = dict()
                 if mode == "gen":
                     sample = sample_fn(model, motions.shape, clip_denoised=False, model_kwargs=model_kwargs)
@@ -60,16 +62,16 @@ class NewDataloader:
                     batch["output"] = batch["output"][:, :-1]
 
                 batch["lengths"] = model_kwargs['y']['lengths'].to(device)
-                # using torch.long so lengths/action will be used as indices
+                # using torch.long so lengths / action will be used as indices
                 if cond_mode != 'no_cond':  # proceed only if not running unconstrained
                     batch["y"] = model_kwargs['y']['action'].squeeze().long().cpu()  # using torch.long so lengths/action will be used as indices
+                
                 self.batches.append(batch)
 
             num_samples_last_batch = num_samples % dataiterator.batch_size
             if num_samples_last_batch > 0:
                 for k, v in self.batches[-1].items():
                     self.batches[-1][k] = v[:num_samples_last_batch]
-
 
     def __iter__(self):
         return iter(self.batches)
@@ -84,18 +86,17 @@ def evaluate(args, model, diffusion, data):
     args.njoint = 25
     device = dist_util.dev()
 
-
     recogparameters = args.__dict__.copy()
     recogparameters["pose_rep"] = "rot6d"
     recogparameters["nfeats"] = 6
 
     # Action2motionEvaluation
     stgcnevaluation = STGCNEvaluation(args.dataset, recogparameters, device)
-
     stgcn_metrics = {}
 
     data_types = ['train', 'test']
-    datasetGT = {'train': [data], 'test': [copy.deepcopy(data)]}
+    datasetGT = {'train': [data], 
+                 'test': [copy.deepcopy(data)]}
 
     for key in data_types:
         datasetGT[key][0].split = key
@@ -111,37 +112,47 @@ def evaluate(args, model, diffusion, data):
 
     for index, seed in enumerate(allseeds):
         print(f"Evaluation number: {index + 1}/{args.num_seeds}")
-        fixseed(seed)
+        fix_seed(seed)
         for key in data_types:
             for data in datasetGT[key]:
                 data.reset_shuffle()
                 data.shuffle()
 
-        dataiterator = {key: [DataLoader(data, batch_size=bs, shuffle=False, num_workers=8, collate_fn=collate)
-                              for data in datasetGT[key]]
-                        for key in data_types}
+        dataiterator = {
+            key: [DataLoader(data, batch_size=bs, shuffle=False, num_workers=8, collate_fn=collate)
+                        for data in datasetGT[key]]
+                        for key in data_types
+        }
 
         new_data_loader = functools.partial(NewDataloader, model=model, diffusion=diffusion, device=device,
                                             cond_mode=args.cond_mode, dataset=args.dataset, num_samples=args.num_samples)
-        gtLoaders = {key: new_data_loader(mode="gt", dataiterator=dataiterator[key][0])
-                     for key in ["train", "test"]}
+        gtLoaders = {
+                key: new_data_loader(mode="gt", dataiterator=dataiterator[key][0])
+            for key in ["train", "test"]
+        }
 
         if compute_gt_gt:
-            gtLoaders2 = {key: new_data_loader(mode="gt", dataiterator=dataiterator[key][0])
-                          for key in ["train", "test"]}
+            gtLoaders2 = {
+                    key: new_data_loader(mode="gt", dataiterator=dataiterator[key][0])
+                for key in ["train", "test"]
+            }
 
-        genLoaders = {key: new_data_loader(mode="gen", dataiterator=dataiterator[key][0])
-                      for key in ["train", "test"]}
+        genLoaders = {
+                key: new_data_loader(mode="gen", dataiterator=dataiterator[key][0])
+            for key in ["train", "test"]
+        }
 
-        loaders = {"gen": genLoaders,
-                   "gt": gtLoaders}
-
+        loaders = {"gen": genLoaders, "gt": gtLoaders,}
         if compute_gt_gt:
             loaders["gt2"] = gtLoaders2
 
         stgcn_metrics[seed] = stgcnevaluation.evaluate(model, loaders)
         del loaders
 
-    metrics = {"feats": {key: [format_metrics(stgcn_metrics[seed])[key] for seed in allseeds] for key in stgcn_metrics[allseeds[0]]}}
+    metrics = {
+        "feats": {key: [format_metrics(stgcn_metrics[seed])[key] 
+            for seed in allseeds] 
+            for key in stgcn_metrics[allseeds[0]]}
+    }
 
     return metrics

@@ -23,11 +23,14 @@ def list_cut_average(ll, intervals):
         l_high = l_low + intervals
         l_high = l_high if l_high < len(ll) else len(ll)
         ll_new.append(np.mean(ll[l_low:l_high]))
+
     return ll_new
 
 
-def plot_3d_motion(save_path, kinematic_tree, joints, title, dataset, figsize=(3, 3), fps=120, radius=3,
+def plot_3d_motion(save_path, kinematic_tree, joints, title, dataset, 
+                   figsize=(3, 3), fps=120, radius=3,
                    vis_mode='default', gt_frames=[]):
+
     matplotlib.use('Agg')
 
     title = '\n'.join(wrap(title, 20))
@@ -128,9 +131,9 @@ def plot_3d_motion(save_path, kinematic_tree, joints, title, dataset, figsize=(3
         ax.set_zticklabels([])
 
     ani = FuncAnimation(fig, update, frames=frame_number, interval=1000 / fps, repeat=False)
-
-    # writer = FFMpegFileWriter(fps=fps)
     ani.save(save_path, fps=fps)
+
+    # writer = FFMpegFileWriter(fps=fps)    
     # ani = FuncAnimation(fig, update, frames=frame_number, interval=1000 / fps, repeat=False, init_func=init)
     # ani.save(save_path, writer='pillow', fps=1000 / fps)
 

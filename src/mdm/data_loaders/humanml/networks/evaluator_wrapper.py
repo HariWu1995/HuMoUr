@@ -1,8 +1,11 @@
-from data_loaders.humanml.networks.modules import *
-from data_loaders.humanml.utils.word_vectorizer import POS_enumerator
 from os.path import join as pjoin
 
+from src.mdm.data_loaders.humanml.networks.modules import *
+from src.mdm.data_loaders.humanml.utils.word_vectorizer import POS_enumerator
+
+
 def build_models(opt):
+
     movement_enc = MovementConvEncoder(opt.dim_pose-4, opt.dim_movement_enc_hidden, opt.dim_movement_latent)
     text_enc = TextEncoderBiGRUCo(word_size=opt.dim_word,
                                   pos_size=opt.dim_pos_ohot,
@@ -15,8 +18,11 @@ def build_models(opt):
                                       output_size=opt.dim_coemb_hidden,
                                       device=opt.device)
 
-    checkpoint = torch.load(pjoin(opt.checkpoints_dir, opt.dataset_name, 'text_mot_match', 'model', 'finest.tar'),
-                            map_location=opt.device)
+    checkpoint = torch.load(
+        pjoin(opt.checkpoints_dir, opt.dataset_name, 'text_mot_match', 'model', 'finest.tar'),
+        map_location=opt.device
+    )
+
     movement_enc.load_state_dict(checkpoint['movement_encoder'])
     text_enc.load_state_dict(checkpoint['text_encoder'])
     motion_enc.load_state_dict(checkpoint['motion_encoder'])
@@ -74,6 +80,7 @@ class EvaluatorModelWrapper(object):
             '''Text Encoding'''
             text_embedding = self.text_encoder(word_embs, pos_ohot, cap_lens)
             text_embedding = text_embedding[align_idx]
+
         return text_embedding, motion_embedding
 
     # Please note that the results does not following the order of inputs
@@ -89,6 +96,7 @@ class EvaluatorModelWrapper(object):
             movements = self.movement_encoder(motions[..., :-4]).detach()
             m_lens = m_lens // self.opt.unit_length
             motion_embedding = self.motion_encoder(movements, m_lens)
+
         return motion_embedding
 
 # our version
@@ -114,8 +122,10 @@ def build_evaluators(opt):
     movement_enc.load_state_dict(checkpoint['movement_encoder'])
     text_enc.load_state_dict(checkpoint['text_encoder'])
     motion_enc.load_state_dict(checkpoint['motion_encoder'])
+
     print('Loading Evaluation Model Wrapper (Epoch %d) Completed!!' % (checkpoint['epoch']))
     return text_enc, motion_enc, movement_enc
+
 
 # our wrapper
 class EvaluatorMDMWrapper(object):
@@ -169,6 +179,7 @@ class EvaluatorMDMWrapper(object):
             '''Text Encoding'''
             text_embedding = self.text_encoder(word_embs, pos_ohot, cap_lens)
             text_embedding = text_embedding[align_idx]
+
         return text_embedding, motion_embedding
 
     # Please note that the results does not following the order of inputs
@@ -184,4 +195,5 @@ class EvaluatorMDMWrapper(object):
             movements = self.movement_encoder(motions[..., :-4]).detach()
             m_lens = m_lens // self.opt['unit_length']
             motion_embedding = self.motion_encoder(movements, m_lens)
+
         return motion_embedding
