@@ -3,6 +3,9 @@ archive
 body_models
 dataset/HumanML3D
 
+# Download objects
+*.crdownload
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
