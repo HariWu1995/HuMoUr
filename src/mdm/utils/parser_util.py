@@ -1,7 +1,7 @@
-from argparse import ArgumentParser
-import argparse
 import os
 import json
+from argparse import ArgumentParser
+import argparse
 
 
 def parse_and_load_from_model(parser):

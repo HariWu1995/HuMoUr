@@ -1,8 +1,8 @@
 from diffusion import gaussian_diffusion as gd
 from diffusion.respace import SpacedDiffusion, space_timesteps
 
-from model.mdm import MDM
-from utils.parser_util import get_cond_mode
+from src.mdm.model.mdm import MDM
+from src.mdm.utils.parser_util import get_cond_mode
 
 
 def load_model_wo_clip(model, state_dict):
