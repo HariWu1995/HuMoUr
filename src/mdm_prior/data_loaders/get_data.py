@@ -106,8 +106,10 @@ def get_dataset_loader(name, batch_size, num_frames,
         load_mode = 'train'
 
     collate = get_collate_fn(name, load_mode)
-    dataset = get_dataset(name, num_frames, split, load_mode, batch_size, opt, 
-                          short_db, cropping_sampler, size, dataset_path=dataset_path)
+    dataset = get_dataset(name=name, num_frames=num_frames, split=split, 
+                          load_mode=load_mode, batch_size=batch_size, opt=opt, 
+                          short_db=short_db, cropping_sampler=cropping_sampler, 
+                          size=size, dataset_path=dataset_path)
 
     n_workers = 1 if load_mode in ['movement_train', 'evaluator_train'] else 8
     dataloader = DataLoader(

@@ -1229,7 +1229,8 @@ A wrapper class for t2m original dataset for MDM purposes
 class KIT(HumanML3D):
 
     def __init__(self, load_mode, datapath='./dataset/KIT-ML', 
-                                configpath='./dataset/kit_opt.txt', split="train", **kwargs):
+                                configpath='./dataset/kit_opt.txt', 
+                                     split="train", **kwargs):
         super(KIT, self).__init__(load_mode, datapath, split, **kwargs)
 
 
@@ -1239,7 +1240,8 @@ A wrapper class for t2m original dataset for MDM purposes
 class PW3D(HumanML3D):
 
     def __init__(self, load_mode, datapath='./dataset/PW3D', 
-                                configpath='./dataset/pw3d_opt.txt', split="train", **kwargs):
+                                configpath='./dataset/pw3d_opt.txt', 
+                                     split="train", **kwargs):
         super(PW3D, self).__init__(load_mode, datapath, split, **kwargs)
 
 
