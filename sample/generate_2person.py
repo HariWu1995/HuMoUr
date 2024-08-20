@@ -235,11 +235,12 @@ def main():
 
 
 def load_dataset(args, max_frames, n_frames):
-    data = get_dataset_loader(name=args.multi_dataset,
-                              batch_size=args.batch_size,
-                              num_frames=max_frames,
-                              split='validation', #test
-                              load_mode='text')  # for GT vis
+    data = get_dataset_loader(name = args.multi_dataset,
+                      dataset_path = args.data_dir,
+                        batch_size = args.batch_size,
+                        num_frames = max_frames,
+                             split = 'validation', # test
+                         load_mode = 'text',)  # for GT vis
     data.fixed_length = n_frames
     return data
 

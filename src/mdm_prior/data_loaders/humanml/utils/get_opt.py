@@ -30,7 +30,7 @@ def is_number(numStr):
     return flag
 
 
-def get_opt(opt_path, device):
+def get_opt(opt_path, device=None, data_root=None):
     opt = Namespace()
     opt_dict = vars(opt)
 
@@ -57,10 +57,10 @@ def get_opt(opt_path, device):
     opt_dict['which_epoch'] = 'latest'
     opt.save_root = pjoin(opt.checkpoints_dir, opt.dataset_name, opt.name)
     opt.model_dir = pjoin(opt.save_root, 'model')
-    opt.meta_dir = pjoin(opt.save_root, 'meta')
+    opt.meta_dir  = pjoin(opt.save_root, 'meta')
 
     if opt.dataset_name == 't2m':
-        opt.data_root = './dataset/HumanML3D'
+        opt.data_root = './dataset/HumanML3D' if data_root is None else data_root
         opt.motion_dir = pjoin(opt.data_root, 'new_joint_vecs')
         opt.text_dir = pjoin(opt.data_root, 'texts')
         opt.joints_num = 22

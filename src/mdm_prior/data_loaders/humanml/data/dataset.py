@@ -644,8 +644,8 @@ class BABEL_Text2MotionDatasetV2(BABEL):
 
     def __init__(self, split, datapath, transforms, opt, mean, std, w_vectorizer, sampler, mode, **kwargs):
         BABEL.__init__(self, datapath=datapath, transforms=transforms, split=split, sampler=sampler,
-                       parse_tokens=True, mode=mode, short_db=kwargs.get('short_db', False),
-                       cropping_sampler=kwargs.get('cropping_sampler', False))  # tokens are needed for training
+                            parse_tokens=True, mode=mode, short_db=kwargs.get('short_db', False),
+                            cropping_sampler=kwargs.get('cropping_sampler', False))  # tokens are needed for training
         self.opt = opt
         self.w_vectorizer = w_vectorizer
         self.max_length = 20
@@ -967,8 +967,8 @@ For training BABEL movement encoder (used by evaluators)
 class BABEL_MotionDatasetV2(BABEL):
 
     def __init__(self, split, datapath, transforms, opt, mean, std, sampler, mode, **kwargs):
-        BABEL.__init__(self, datapath=datapath, transforms=transforms, split=split,  sampler=sampler,
-                       parse_tokens=False, mode=mode, **kwargs)  # Tokens are not needed
+        BABEL.__init__(self, datapath=datapath, transforms=transforms, split=split, 
+                              sampler=sampler, parse_tokens=False, mode=mode, **kwargs)  # Tokens are not needed
         self.opt = opt
         self.max_length = 20
         self.pointer = 0
@@ -1155,28 +1155,31 @@ A wrapper class for t2m original dataset for MDM purposes
 '''
 class HumanML3D(data.Dataset):
 
-    def __init__(self, load_mode, datapath='./dataset/humanml_opt.txt', split="train", **kwargs):
+    def __init__(self, load_mode, 
+                        datapath='./dataset/HumanML3D', 
+                        configpath='./dataset/humanml_opt.txt', 
+                        split="train", **kwargs):
+
         self.load_mode = load_mode
-        
         self.dataset_name = 't2m'
         self.dataname = 't2m'
         self.split = split
 
         # Configurations of T2M dataset and KIT dataset is almost the same
-        abs_base_path = f'.'
-        dataset_opt_path = pjoin(abs_base_path, datapath)
-        device = None  # torch.device('cuda:4') # This param is not in use in this context
+        abs_base_path = kwargs.get('abs_base_path', '.')
+        dataset_opt_path = pjoin(abs_base_path, configpath)
         
-        opt = get_opt(dataset_opt_path, device)
-        opt.meta_dir = pjoin(abs_base_path, opt.meta_dir)
-        opt.motion_dir = pjoin(abs_base_path, opt.motion_dir)
-        opt.text_dir = pjoin(abs_base_path, opt.text_dir)
-        opt.model_dir = pjoin(abs_base_path, opt.model_dir)
-        opt.checkpoints_dir = pjoin(abs_base_path, opt.checkpoints_dir)
-        opt.data_root = pjoin(abs_base_path, opt.data_root)
-        opt.save_root = pjoin(abs_base_path, opt.save_root)
-        opt.meta_dir = './dataset'
-        opt.load_mode = load_mode
+        opt = get_opt(dataset_opt_path, data_root=datapath)
+
+        opt.load_mode = load_mode    
+        opt.meta_dir = kwargs.get('meta_dir', './dataset')
+        # opt.meta_dir = pjoin(abs_base_path, opt.meta_dir)
+        # opt.motion_dir = pjoin(abs_base_path, opt.motion_dir)
+        # opt.text_dir = pjoin(abs_base_path, opt.text_dir)
+        # opt.model_dir = pjoin(abs_base_path, opt.model_dir)
+        # opt.checkpoints_dir = pjoin(abs_base_path, opt.checkpoints_dir)
+        # opt.data_root = pjoin(abs_base_path, opt.data_root)
+        # opt.save_root = pjoin(abs_base_path, opt.save_root)
 
         self.opt = opt
         print('Loading dataset %s ...' % opt.dataset_name)
@@ -1226,7 +1229,8 @@ A wrapper class for t2m original dataset for MDM purposes
 '''
 class KIT(HumanML3D):
 
-    def __init__(self, load_mode, datapath='./dataset/kit_opt.txt', split="train", **kwargs):
+    def __init__(self, load_mode, datapath='./dataset/KIT-ML', 
+                                configpath='./dataset/kit_opt.txt', split="train", **kwargs):
         super(KIT, self).__init__(load_mode, datapath, split, **kwargs)
 
 
@@ -1235,7 +1239,8 @@ A wrapper class for t2m original dataset for MDM purposes
 '''
 class PW3D(HumanML3D):
 
-    def __init__(self, load_mode, datapath='./dataset/pw3d_opt.txt', split="train", **kwargs):
+    def __init__(self, load_mode, datapath='./dataset/PW3D', 
+                                configpath='./dataset/pw3d_opt.txt', split="train", **kwargs):
         super(PW3D, self).__init__(load_mode, datapath, split, **kwargs)
 
 
@@ -1245,35 +1250,39 @@ A wrapper class for t2m original dataset for MDM purposes
 class BABEL_eval(data.Dataset):
     
     def __init__(self, load_mode, datapath, transforms, sampler, mode, opt, split="train", **kwargs):
+
         self.load_mode = load_mode
         self.split = split
         self.datapath = datapath
-
-        abs_base_path = f'.'
+        
         if opt is None:
-            self.opt_path = './dataset/humanml_opt.txt'
+
+            abs_base_path = kwargs.get('abs_base_path', '.')
+            self.opt_path = kwargs.get('configpath', './dataset/humanml_opt.txt')
 
             # Configurations of T2M dataset and KIT dataset is almost the same
             dataset_opt_path = pjoin(abs_base_path, self.opt_path)
-            device = None  # torch.device('cuda:4') # This param is not in use in this context
             
-            opt = get_opt(dataset_opt_path, device)
-            opt.data_root = pjoin('dataset', 'babel')
-            opt.meta_dir = pjoin(abs_base_path, opt.meta_dir)
-            opt.motion_dir = pjoin(abs_base_path, opt.motion_dir)
-            opt.text_dir = pjoin(abs_base_path, opt.text_dir)
-            opt.model_dir = None
-            opt.checkpoints_dir = '.'
-            opt.data_root = pjoin(abs_base_path, opt.data_root)
-            opt.save_root = pjoin(abs_base_path, opt.save_root)
-            opt.meta_dir = './dataset'
-            opt.dim_pose = 135
-            opt.foot_contact_entries = 0
+            opt = get_opt(dataset_opt_path)
+
             opt.dataset_name = 'babel'
             opt.decomp_name = 'Decomp_SP001_SM001_H512_babel_2700epoch'
-            opt.meta_root = pjoin(opt.checkpoints_dir, opt.dataset_name, 'motion1', 'meta')
             opt.min_motion_length = sampler.min_len # must be at least window size
             opt.max_motion_length = sampler.max_len
+            opt.dim_pose = 135
+            opt.foot_contact_entries = 0
+
+            # opt.meta_dir = pjoin(abs_base_path, opt.meta_dir)
+            # opt.text_dir = pjoin(abs_base_path, opt.text_dir)
+            # opt.motion_dir = pjoin(abs_base_path, opt.motion_dir)
+            # opt.save_root = pjoin(abs_base_path, opt.save_root)
+            # opt.data_root = pjoin(abs_base_path, opt.data_root)
+            # opt.data_root = pjoin('dataset', 'babel')
+            
+            opt.model_dir = None
+            opt.checkpoints_dir = '.'
+            opt.meta_dir = './dataset'
+            opt.meta_root = pjoin(opt.checkpoints_dir, opt.dataset_name, 'motion1', 'meta')
         
         self.opt = opt
 
@@ -1286,7 +1295,8 @@ class BABEL_eval(data.Dataset):
         self.mean = np.zeros([opt.dim_pose], dtype=np.float32)  # data is already normalized
         self.std = np.ones([opt.dim_pose], dtype=np.float32)  # data is already normalized
 
-        DATA = BABEL_MotionDatasetV2 if load_mode == 'movement_train' else BABEL_Text2MotionDatasetV2
+        DATA = BABEL_MotionDatasetV2 if load_mode == 'movement_train' \
+          else BABEL_Text2MotionDatasetV2
 
         self.w_vectorizer = WordVectorizer(pjoin(DEPENDENCIES_DIR, 'glove'), 'our_vab')
         self.t2m_dataset = DATA(
@@ -1299,8 +1309,8 @@ class BABEL_eval(data.Dataset):
             std=self.std, 
             sampler=self.sampler,
             w_vectorizer=self.w_vectorizer, 
-            short_db=kwargs.get('short_db', False), 
-            cropping_sampler=kwargs.get('cropping_sampler', False)
+                    short_db=kwargs.get('short_db', False), 
+            cropping_sampler=kwargs.get('cropping_sampler', False),
         )
         self.num_actions = 1  # dummy placeholder
 

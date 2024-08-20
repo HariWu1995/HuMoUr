@@ -779,9 +779,8 @@ class HumanML3D(data.Dataset):
         dataset_opt_path = pjoin(abs_base_path, configpath)
         opt = get_opt(dataset_opt_path, data_root=datapath)
 
-        # opt.meta_dir = pjoin(abs_base_path, opt.meta_dir)
         opt.meta_dir = kwargs.get('meta_dir', './dataset')
-        
+        # opt.meta_dir = pjoin(abs_base_path, opt.meta_dir)        
         # opt.text_dir = pjoin(abs_base_path, opt.text_dir)
         # opt.model_dir = pjoin(abs_base_path, opt.model_dir)
         # opt.motion_dir = pjoin(abs_base_path, opt.motion_dir)
@@ -794,20 +793,17 @@ class HumanML3D(data.Dataset):
 
         if mode == 'gt':
             # used by T2M models (including evaluators)
-            print('\t ... @', opt.meta_dir)
             self.mean = np.load(pjoin(opt.meta_dir, f'{opt.dataset_name}_mean.npy'))
             self.std = np.load(pjoin(opt.meta_dir, f'{opt.dataset_name}_std.npy'))
 
         elif mode in ['train', 'eval', 'text_only']:
             # used by our models
-            print('\t ... @', opt.data_root)
             self.mean = np.load(pjoin(opt.data_root, 'Mean.npy'))
             self.std = np.load(pjoin(opt.data_root, 'Std.npy'))
 
         if mode == 'eval':
             # used by T2M models (including evaluators)
             # this is to translate their norms to ours
-            print('\t ... @', opt.meta_dir)
             self.mean_for_eval = np.load(pjoin(opt.meta_dir, f'{opt.dataset_name}_mean.npy'))
             self.std_for_eval = np.load(pjoin(opt.meta_dir, f'{opt.dataset_name}_std.npy'))
 

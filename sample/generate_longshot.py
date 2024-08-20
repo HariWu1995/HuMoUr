@@ -291,13 +291,14 @@ def load_dataset(args, n_frames):
     else:
         args.num_frames = n_frames
 
-    data = get_dataset_loader(name=args.dataset,
-                              batch_size=args.batch_size,
-                              num_frames=args.num_frames,
-                              split='val',
-                              load_mode='text_only',
-                              short_db=args.short_db,
-                              cropping_sampler=args.cropping_sampler)
+    data = get_dataset_loader(name = args.dataset,
+                      dataset_path = args.data_dir,
+                        batch_size = args.batch_size,
+                        num_frames = args.num_frames,
+                          short_db = args.short_db,
+                  cropping_sampler = args.cropping_sampler,
+                             split = 'val',
+                         load_mode = 'text_only',)
                               
     data.fixed_length = n_frames
     return data

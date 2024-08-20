@@ -96,7 +96,6 @@ def main():
         model_kwargs['y']['inpainted_motion_multi'][0] = model_kwargs['y']['inpainted_motion_multi'][0].to(dist_util.dev())
         model_kwargs['y']['inpainted_motion_multi'][1] = model_kwargs['y']['inpainted_motion_multi'][1].to(dist_util.dev())
 
-        
         sample_fn = diffusion.p_sample_loop
         # del model_kwargs['y']['other_motion']  # not necessary - just to make sure
 
@@ -200,11 +199,12 @@ def main():
 
 
 def load_dataset(args, max_frames, n_frames):
-    data = get_dataset_loader(name='pw3d',  # args.multi_dataset,
-                              batch_size=args.batch_size,
-                              num_frames=max_frames,
-                              split='validation',  # args.multi_eval_splits,
-                              load_mode='prefix')  # for GT vis
+    data = get_dataset_loader(name = 'pw3d',  # args.multi_dataset,
+                      dataset_path = args.data_dir,
+                        batch_size = args.batch_size,
+                        num_frames = max_frames,
+                             split = 'validation',  # args.multi_eval_splits,
+                         load_mode = 'prefix')  # for GT vis
     data.fixed_length = n_frames
     return data
 

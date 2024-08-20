@@ -36,6 +36,9 @@ from .file_io import read_json
 from .nlp_consts import fix_spell
 from .transforms import Transform
 
+import spacy
+nlp = spacy.load('en_core_web_sm')
+
 
 logger = logging.getLogger(__name__)
 
@@ -43,9 +46,6 @@ SPLITS = ["train", "val", "test", "all", "subset"]
 EXCLUDED_ACTIONS = ['t-pose','a-pose','a pose','t pose','tpose','apose','transition']
 EXCLUDED_ACTIONS_WO_TR = ['t-pose','a-pose','a pose','t pose','tpose','apose']
 
-
-import spacy
-nlp = spacy.load('en_core_web_sm')
 
 # Tokenizer according to https://github.com/EricGuo5513/HumanML3D/blob/main/text_process.py
 def process_text(sentence):
@@ -69,18 +69,19 @@ def process_text(sentence):
 
 def get_split(path: str, split: str, subset: Optional[str] = ''):
     assert split in SPLITS
-    filepath = Path(path) / f'{split}{subset}.pth.tar'
+    filepath = Path(path) / f'babel-smplh-30fps-male/{split}{subset}.pth.tar'
     split_data = joblib.load(filepath)
     return split_data
 
 
 def get_babel_keys(path: str):
-    filepath = Path(path) / f'../babel-teach/id2fname/amass-path2babel.json'
+    filepath = Path(path) / f'babel-teach/id2fname/amass-path2babel.json'
     amass2babel = read_json(filepath)
     return amass2babel
 
 
 def separate_actions(pair: Tuple[Tuple]):
+    
     if len(pair) == 3:
         if pair[0][1] < pair[2][0]:
             # a1 10, 15 t 14, 18 a2 17, 25
@@ -373,21 +374,21 @@ class BABEL(Dataset):
 
     dataname = "BABEL"
 
-    def __init__( self, datapath: str,
-                        transforms: Transform,
+    def __init__( self, datapath: str = './dataset/babel',
+                        dtype: str = 'separate_pairs',
                         split: str = "train",
+                        mode: str = 'train',
+                        transforms: Optional[Transform] = None,
                         transforms_xyz: Optional[Transform] = None,
                         transforms_smpl: Optional[Transform] = None,
                         sampler=None,
                         progress_bar: bool = True,
-                        load_with_rot=True,
-                        downsample=True,
+                        load_with_rot: bool = True,
+                        parse_tokens: bool = False,
+                        downsample: bool = True,
                         tiny: bool = False,
                         walk_only: Optional[bool] = False,
                         kit_only: Optional[bool] = False,
-                        dtype: str = 'separate_pairs',
-                        mode: str = 'train',
-                        parse_tokens: bool = False,
                         **kwargs):
 
         self.split = split
@@ -416,11 +417,11 @@ class BABEL(Dataset):
 
         if tiny:
             data_for_split = get_split(path=datapath, split=split, subset='_tiny')
-            self.babel_annots = read_json(Path(datapath) / f'../babel-teach/{split}.json')
+            self.babel_annots = read_json(Path(datapath) / f'babel-teach/{split}.json')
         
         else:
             data_for_split = get_split(path=datapath, split=split)
-            self.babel_annots = read_json(Path(datapath) / f'../babel-teach/{split}.json')
+            self.babel_annots = read_json(Path(datapath) / f'babel-teach/{split}.json')
 
         motion_data = {}
         texts_data = {}
