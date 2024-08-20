@@ -438,8 +438,7 @@ class PW3D_Text2MotionDatasetV2(data.Dataset):
 
         splits = splits.split(',')
 
-        data_dir = f'{self.opt.data_root}/3dpw'
-        joints_dir = f'{data_dir}/new_joint_vecs'
+        joints_dir = f'{self.opt.data_root}/new_joint_vecs'
         group_path = [
             [
                 pjoin(joints_dir, s, f) 
