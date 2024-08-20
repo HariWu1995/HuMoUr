@@ -240,7 +240,7 @@ def load_dataset(args, max_frames, n_frames):
                         batch_size = args.batch_size,
                         num_frames = max_frames,
                              split = 'validation', # test
-                         load_mode = 'text',)  # for GT vis
+                         load_mode = 'gt',)  # for GT vis
     data.fixed_length = n_frames
     return data
 
