@@ -55,15 +55,18 @@ def main():
     
     fps = 30 if args.dataset == 'babel' else 20
     n_frames = 150
-    is_using_data = not args.input_text
+
     dist_util.setup_dist(args.device)
+
+    is_using_data = not (args.input_text or args.text_prompt)
     is_csv, is_txt = False, False
-    assert (args.double_take)
+    assert (args.double_take), "Please set `double_take` be TRUE"
 
     out_path = args.output_dir
     if out_path == '':
         out_path = os.path.join(os.path.dirname(args.model_path),
                                 'DoubleTake_samples_{}_{}_seed{}'.format(name, niter, args.seed))
+        
         if args.input_text != '':
             if ".txt" in args.input_text:
                 out_path += '_' + os.path.basename(args.input_text).replace('.txt', '').replace(' ', '_').replace('.', '')
@@ -77,13 +80,19 @@ def main():
         if args.sample_gt:
             out_path += "_gt"
         out_path += f"_handshake_{args.handshake_size}"
+
         if args.double_take:
             out_path += "_double_take"
             out_path += f"_blend_{args.blend_len}"
             out_path += f"_skipSteps_{args.skip_steps_double_take}"
 
     # this block must be called BEFORE the dataset is loaded
-    if args.input_text != '':
+    if args.text_prompt != '':
+        is_txt = True
+        texts = args.text_prompt.split('.')
+        args.num_samples = len(texts)
+
+    elif args.input_text != '':
         assert os.path.exists(args.input_text)
         if is_txt:
             with open(args.input_text, 'r') as fr:
@@ -114,7 +123,7 @@ def main():
             'lengths': torch.tensor(list(df['length'])),
             'text': list(df['text']),
             'tokens': [''],
-            'scale': torch.ones(len(list(df['text'])))*2.5
+            'scale': torch.ones(len(list(df['text'])))*2.5,
         }}
 
     elif is_txt:
@@ -123,11 +132,11 @@ def main():
             'lengths': torch.tensor([n_frames]*len(texts)),
             'text': texts,
             'tokens': [''],
-            'scale': torch.ones(len(texts))*2.5
+            'scale': torch.ones(len(texts))*2.5,
         }}
 
     else:
-        raise TypeError("Only text to motion is availible atm")
+        raise TypeError("Only text-to-motion is availible!")
 
     all_motions = []
     all_lengths = []
@@ -138,7 +147,10 @@ def main():
         print(f'### Sampling [repetitions #{rep_i}]')
         if args.guidance_param != 1:
             model_kwargs['y']['scale'] = torch.ones(args.batch_size, device=dist_util.dev()) * args.guidance_param
-        model_kwargs['y'] = {key: val.to(dist_util.dev()) if torch.is_tensor(val) else val for key, val in model_kwargs['y'].items()}
+        model_kwargs['y'] = {
+                key: val.to(dist_util.dev()) if torch.is_tensor(val) else val 
+            for key, val in model_kwargs['y'].items()
+        }
 
         max_arb_len = model_kwargs['y']['lengths'].max()
         min_arb_len = 2 * args.handshake_size + 2*args.blend_len + 10

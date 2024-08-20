@@ -36,13 +36,14 @@ def main():
     niter = os.path.basename(args.model_path).replace('model', '').replace('.pt', '')
     fps = 20
     n_frames = 80
+    max_frames = n_frames + 1  # for global root pose
+    sample1 = None  # a place holder for two characters, do not delete
 
     args.num_repetitions = 1  # Hardcoded - prefix completion has limited diversity.
     args.edit_mode = 'prefix'  # Prefix completion script.
-    
-    max_frames = n_frames + 1  # for global root pose
-    sample1 = None  # a place holder for two characters, do not delete
+
     dist_util.setup_dist(args.device)
+
     if out_path == '':
         out_path = os.path.join(os.path.dirname(args.model_path),
                                 'prefix_completion_{}_{}_{}_seed{}'.format(name, niter, args.edit_mode, args.seed))
@@ -61,15 +62,17 @@ def main():
 
     iterator = iter(data)
     input_motions, model_kwargs = next(iterator)
-
     input_motions = input_motions[..., :n_frames+1]
-    model_kwargs['y']['mask'] = model_kwargs['y']['mask'][..., :n_frames+1]
-    model_kwargs['y']['other_motion'] = model_kwargs['y']['other_motion'][..., :n_frames+1]
 
-    gt_frames_per_sample = {}
-    model_kwargs['y']['inpainted_motion_multi'] = [input_motions, model_kwargs['y']['other_motion'].to(input_motions.device)]
-    model_kwargs['y']['inpainting_mask'] = torch.ones_like(input_motions, dtype=torch.bool,
+    model_kwargs['y']['mask'        ] = model_kwargs['y']['mask'        ][..., :n_frames+1]
+    model_kwargs['y']['other_motion'] = model_kwargs['y']['other_motion'][..., :n_frames+1]
+    model_kwargs['y']['inpainted_motion_multi'] = [input_motions, 
+                                                   model_kwargs['y']['other_motion'].to(input_motions.device)]
+    model_kwargs['y']['inpainting_mask'] = torch.ones_like(input_motions, 
+                                                            dtype=torch.bool,
                                                            device=input_motions.device)  # True means use gt motion
+    
+    gt_frames_per_sample = {}
     for i, length in enumerate(model_kwargs['y']['lengths'].cpu().numpy()):
         start_idx, end_idx = int(args.prefix_end * length), int(args.suffix_start * length)
         gt_frames_per_sample[i] = list(range(0, start_idx))
@@ -81,7 +84,9 @@ def main():
     all_text = []
     all_captions = []
 
-    gt, gt1 = extract_motions(input_motions.cpu(), model_kwargs['y']['other_motion'].cpu(), data)
+    gt, gt1 = extract_motions(input_motions.cpu(), 
+                              model_kwargs['y']['other_motion'].cpu(), 
+                              data)
 
     def process_to_save(_sample0, _sample1):
         sample_save = np.concatenate((_sample0[None], _sample1[None]), axis=0).transpose(1, 0, 4, 2, 3)
@@ -172,7 +177,8 @@ def main():
             # Credit for visualization: 
             #       https://github.com/EricGuo5513/text-to-motion
             rep_files.append(animation_save_path)
-            plot_3d_motion(animation_save_path, skeleton, motion, dataset=args.dataset, title=caption, fps=fps, vis_mode=args.edit_mode,
+            plot_3d_motion(animation_save_path, skeleton, motion, dataset=args.dataset, 
+                           title=caption, fps=fps, vis_mode=args.edit_mode,
                            gt_frames=gt_frames_per_sample.get(sample_i, []),
                            joints2=motion1)#, captions=captions)
 
