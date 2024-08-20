@@ -11,10 +11,10 @@ import torch
 from torch.utils import data
 from torch.utils.data._utils.collate import default_collate
 
-from data_loaders.amass.babel import BABEL
-from data_loaders.amass.sampling import FrameSampler
-from data_loaders.humanml.utils.get_opt import get_opt
-from data_loaders.humanml.utils.word_vectorizer import WordVectorizer
+from src.mdm_prior.data_loaders.amass.babel import BABEL
+from src.mdm_prior.data_loaders.amass.sampling import FrameSampler
+from src.mdm_prior.data_loaders.humanml.utils.get_opt import get_opt
+from src.mdm_prior.data_loaders.humanml.utils.word_vectorizer import WordVectorizer
 
 
 MOTION_TYPES = [
