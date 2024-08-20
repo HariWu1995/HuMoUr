@@ -79,6 +79,7 @@ def parse_and_load_from_multiple_models(parser, task=''):
         inpainting_mask = ','.join([args.inpainting_mask for args in args_list])
         for args in args_list:
             args.inpainting_mask = inpainting_mask
+
     print(f'Using inpainting mask: {args_list[0].inpainting_mask}')
     return args_list
 
@@ -86,7 +87,10 @@ def parse_and_load_from_multiple_models(parser, task=''):
 def get_args_per_group_name(parser, args, group_name):
     for group in parser._action_groups:
         if group.title == group_name:
-            group_dict = {a.dest: getattr(args, a.dest, None) for a in group._group_actions}
+            group_dict = {
+                    a.dest: getattr(args, a.dest, None) 
+                for a in group._group_actions
+            }
             return list(argparse.Namespace(**group_dict).__dict__.keys())
     return ValueError('group_name was not found.')
 
@@ -118,10 +122,8 @@ def add_model_options(parser):
     group.add_argument("--emb_trans_dec", default=False, type=bool,
                        help="For trans_dec architecture only, if true, will inject condition as a class token"
                             " (in addition to cross-attention).")
-    group.add_argument("--layers", default=8, type=int,
-                       help="Number of layers.")
-    group.add_argument("--latent_dim", default=512, type=int,
-                       help="Transformer/GRU width.")
+    group.add_argument("--layers", default=8, type=int, help="Number of layers.")
+    group.add_argument("--latent_dim", default=512, type=int, help="Transformer / GRU width.")
     group.add_argument("--cond_mask_prob", default=.1, type=float,
                        help="The probability of masking the condition during training."
                             " For classifier-free guidance learning.")
@@ -228,11 +230,11 @@ def add_sampling_options(parser):
 def add_double_take_options(parser):
     group = parser.add_argument_group('double_take')
     # group.add_argument("--double_take", action='store_true',
-    #                    help="double take on the generated motion")
+    #                    help="double-take on the generated motion")
     group.add_argument("--double_take", default=True, type=bool,
-                       help="double take on the generated motion")
+                       help="double-take on the generated motion")
     group.add_argument("--second_take_only", action='store_true',
-                       help="double take on the generated motion")
+                       help="double-take on the generated motion")
     group.add_argument("--handshake_size", default=20, type=int,
                        help="handshake size for unfolding")
     group.add_argument("--blend_len", default=20, type=int,
