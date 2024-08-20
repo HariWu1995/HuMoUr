@@ -26,6 +26,7 @@ import src.mdm_prior.data_loaders.humanml.utils.paramUtil as paramUtil
 
 
 def main():
+    
     print(f"generating samples")
     args = generate_multi_args()
     fix_seed(args.seed)

@@ -38,7 +38,9 @@ def load_from_model(args, parser, task=''):
     for group_name in loaded_groups:
         args_to_overwrite += get_args_per_group_name(parser, args, group_name)
 
-    args.model_path = args.model_path if task != 'multi_train' else args.pretrained_path
+    args.model_path = args.model_path if task != 'multi_train' \
+                else args.pretrained_path
+    
     # load args from model
     args_path = os.path.join(os.path.dirname(args.model_path), 'args.json')
     assert os.path.exists(args_path), 'Arguments json file was not found!'
@@ -46,6 +48,8 @@ def load_from_model(args, parser, task=''):
         model_args = json.load(fr)
 
     for a in args_to_overwrite:
+        if a == 'data_dir':
+            continue
         if a in model_args.keys():
             args.__dict__[a] = model_args[a]
         else:

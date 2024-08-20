@@ -18,24 +18,28 @@ from src.mdm_prior.model.comMDM import ComMDM
 from src.mdm_prior.model.cfg_sampler import UnconditionedModel
 
 import src.mdm_prior.data_loaders.humanml.utils.paramUtil as paramUtil
-from src.mdm_prior.data_loaders import humanml_utils
-from src.mdm_prior.data_loaders.get_data import get_dataset_loader
 from src.mdm_prior.data_loaders.humanml.utils.plot_script import plot_3d_motion
+from src.mdm_prior.data_loaders.get_data import get_dataset_loader
+from src.mdm_prior.data_loaders import humanml_utils
 
-from eval.eval_multi import extract_motions
+from src.mdm_prior.eval.eval_multi import extract_motions
 
 
 def main():
+
     print(f"generating samples")
     args = edit_multi_args()
     fix_seed(args.seed)
+
     out_path = args.output_dir
     name = os.path.basename(os.path.dirname(args.model_path))
     niter = os.path.basename(args.model_path).replace('model', '').replace('.pt', '')
     fps = 20
     n_frames = 80
+
     args.num_repetitions = 1  # Hardcoded - prefix completion has limited diversity.
     args.edit_mode = 'prefix'  # Prefix completion script.
+    
     max_frames = n_frames + 1  # for global root pose
     sample1 = None  # a place holder for two characters, do not delete
     dist_util.setup_dist(args.device)
@@ -165,12 +169,13 @@ def main():
             save_file = 'sample{:02d}_rep{:02d}.mp4'.format(sample_i, rep_i)
             animation_save_path = os.path.join(out_path, save_file)
             print(f'[({sample_i}) "{caption}" | Rep #{rep_i} | -> {save_file}]')
-            plot_3d_motion(animation_save_path, skeleton, motion, dataset=args.dataset, title=caption, fps=fps, vis_mode=args.edit_mode,
-                           gt_frames=gt_frames_per_sample.get(sample_i, []),
-                           joints2=motion1)#, captions=captions)
+
             # Credit for visualization: 
             #       https://github.com/EricGuo5513/text-to-motion
             rep_files.append(animation_save_path)
+            plot_3d_motion(animation_save_path, skeleton, motion, dataset=args.dataset, title=caption, fps=fps, vis_mode=args.edit_mode,
+                           gt_frames=gt_frames_per_sample.get(sample_i, []),
+                           joints2=motion1)#, captions=captions)
 
         if args.num_repetitions > 1:
             all_rep_save_file = os.path.join(out_path, 'sample{:02d}.mp4'.format(sample_i))

@@ -28,9 +28,9 @@ def parse_and_load_from_model(parser):
         model_args = json.load(fr)
 
     for a in args_to_overwrite:
+        if a == 'data_dir':
+            continue
         if a in model_args.keys():
-            if a == 'data_dir':
-                continue
             setattr(args, a, model_args[a])
 
         elif 'cond_mode' in model_args: # backward compitability
