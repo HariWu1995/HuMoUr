@@ -106,7 +106,7 @@ def main():
 
     args.batch_size = args.num_samples  # Sampling a single batch from the testset, with exactly args.num_samples
 
-    print('Loading dataset...')
+    print('Loading dataset ...')
     data = load_dataset(args, n_frames)
     total_num_samples = args.num_samples * args.num_repetitions
 

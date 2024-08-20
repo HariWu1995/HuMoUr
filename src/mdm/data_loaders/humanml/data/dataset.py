@@ -290,10 +290,7 @@ class Text2MotionDatasetV2(data.Dataset):
                     new_name_list.append(name)
                     length_list.append(len(motion))
 
-                # print(name)
-
             except Exception as e:
-                # print(name, e)
                 pass
 
         name_list, length_list = zip(*sorted(zip(new_name_list, length_list), key=lambda x: x[1]))
