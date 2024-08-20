@@ -1,11 +1,14 @@
-from model.rotation2xyz import Rotation2xyz
 import numpy as np
 from trimesh import Trimesh
 import os
 import torch
+
 from visualize.simplify_loc2rot import joints2smpl
+from src.mdm.model.rotation2xyz import Rotation2xyz
+
 
 class npy2obj:
+
     def __init__(self, npy_path, sample_idx, rep_idx, device=0, cuda=True):
         self.npy_path = npy_path
         self.motions = np.load(self.npy_path, allow_pickle=True)
@@ -55,12 +58,12 @@ class npy2obj:
     
     def save_npy(self, save_path):
         data_dict = {
-            'motion': self.motions['motion'][0, :, :, :self.real_num_frames],
-            'thetas': self.motions['motion'][0, :-1, :, :self.real_num_frames],
-            'root_translation': self.motions['motion'][0, -1, :3, :self.real_num_frames],
-            'faces': self.faces,
-            'vertices': self.vertices[0, :, :, :self.real_num_frames],
-            'text': self.motions['text'][0],
+            'motion': self.motions['motion'][0, :  , : , :self.real_num_frames],
+            'thetas': self.motions['motion'][0, :-1, : , :self.real_num_frames],
+  'root_translation': self.motions['motion'][0,  -1, :3, :self.real_num_frames],
+              'text': self.motions['text'][0],
+             'faces': self.faces,
+          'vertices': self.vertices[0, :, :, :self.real_num_frames],
             'length': self.real_num_frames,
         }
         np.save(save_path, data_dict)

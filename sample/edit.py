@@ -86,16 +86,22 @@ def main():
     model_kwargs['y']['inpainted_motion'] = input_motions
     
     if args.edit_mode == 'in_between':
-        model_kwargs['y']['inpainting_mask'] = torch.ones_like(input_motions, dtype=torch.bool,
-                                                               device=input_motions.device)  # True means use gt motion
+        # True means use gt motion
+        model_kwargs['y']['inpainting_mask'] = torch.ones_like(input_motions, 
+                                                               dtype=torch.bool,
+                                                               device=input_motions.device)  
         for i, length in enumerate(model_kwargs['y']['lengths'].cpu().numpy()):
             start_idx, end_idx = int(args.prefix_end * length), int(args.suffix_start * length)
             gt_frames_per_sample[i] = list(range(0, start_idx)) + list(range(end_idx, max_frames))
-            model_kwargs['y']['inpainting_mask'][i, :, :, start_idx:end_idx] = False  # do inpainting in those frames
+
+            # do inpainting in those frames
+            model_kwargs['y']['inpainting_mask'][i, :, :, start_idx:end_idx] = False  
 
     elif args.edit_mode == 'upper_body':
-        model_kwargs['y']['inpainting_mask'] = torch.tensor(humanml_utils.HML_LOWER_BODY_MASK, dtype=torch.bool,
-                                                            device=input_motions.device)  # True is lower body data
+        # True is lower body data
+        model_kwargs['y']['inpainting_mask'] = torch.tensor(humanml_utils.HML_LOWER_BODY_MASK, 
+                                                            dtype=torch.bool,
+                                                            device=input_motions.device)
         model_kwargs['y']['inpainting_mask'] = \
         model_kwargs['y']['inpainting_mask'].unsqueeze(0).unsqueeze(-1).unsqueeze(-1)\
                                             .repeat(input_motions.shape[0], 1, 

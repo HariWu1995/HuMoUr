@@ -27,9 +27,11 @@ import os
 import sys
 import os.path as osp
 
+
 def copy2cpu(tensor):
     if isinstance(tensor, np.ndarray): return tensor
     return tensor.detach().cpu().numpy()
+
 
 def create_list_chunks(list_, group_size, overlap_size, cut_smaller_batches=True):
     if cut_smaller_batches:
@@ -41,8 +43,10 @@ def create_list_chunks(list_, group_size, overlap_size, cut_smaller_batches=True
 def trainable_params_count(params):
     return  sum([p.numel() for p in params if p.requires_grad])
 
+
 def flatten_list(l):
     return [item for sublist in l for item in sublist]
+
 
 def get_support_data_dir(current_fname=__file__):
     support_data_dir = osp.abspath(current_fname)
@@ -51,6 +55,7 @@ def get_support_data_dir(current_fname=__file__):
     support_data_dir = osp.join(support_data_dir, 'support_data')
     assert osp.exists(support_data_dir)
     return support_data_dir
+
 
 def make_deterministic(seed):
     random.seed(seed)
@@ -61,11 +66,13 @@ def make_deterministic(seed):
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
     
+
 def id_generator(size=13):
     import string
     import random
     chars = string.ascii_uppercase + string.digits
     return ''.join(random.choice(chars) for _ in range(size))
+
 
 def logger_sequencer(logger_list, prefix=None):
     def post_text(text):
@@ -73,7 +80,9 @@ def logger_sequencer(logger_list, prefix=None):
         for logger_call in logger_list: logger_call(text)
     return post_text
 
+
 class log2file():
+
     def __init__(self,logpath=None, prefix='', auto_newline = True, write2file_only=False):
         if logpath is not None:
             makepath(logpath, isfile=True)
@@ -113,6 +122,7 @@ def makepath(*args, **kwargs):
         if not os.path.exists(desired_path): os.makedirs(desired_path)
     return desired_path
 
+
 def matrot2axisangle(matrots):
     '''
     :param matrots: N*T*num_joints*9
@@ -132,6 +142,7 @@ def matrot2axisangle(matrots):
             T_axisangle.append(np.vstack(cur_axisangle)[np.newaxis])
         out_axisangle.append(np.vstack(T_axisangle).reshape([N,1, -1,3]))
     return np.concatenate(out_axisangle, axis=1)
+
 
 def axisangle2matrots(axisangle):
     '''
