@@ -1189,8 +1189,12 @@ class HumanML3D(data.Dataset):
         
         elif load_mode in ['train', 'eval', 'text_only', 'prefix', 'text']:
             # used by our models
-            self.mean = np.load(pjoin(opt.data_root, 'Mean.npy'))
-            self.std = np.load(pjoin(opt.data_root, 'Std.npy'))
+            # self.mean = np.load(pjoin(opt.data_root, 'Mean.npy'))
+            # self.std = np.load(pjoin(opt.data_root, 'Std.npy'))
+
+            # hardcode
+            self.mean = np.load('./dataset/humanml_mean.npy')
+            self.std = np.load('./dataset/humanml_std.npy')
 
         if load_mode == 'eval':
             # used by T2M models (including evaluators)
