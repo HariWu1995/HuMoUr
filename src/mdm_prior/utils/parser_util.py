@@ -6,6 +6,9 @@ from argparse import ArgumentParser
 import argparse
 
 
+VERBOSE = os.environ.get('ARGUMENT_VERBOSE', True)
+
+
 def parse_and_load_from_model(parser, **kwargs):
     # args according to the loaded model
     # do not try to specify them from cmd line since they will be overwritten
@@ -326,136 +329,214 @@ def add_frame_sampler_options(parser):
                        help="babel dataset FrameSampler maximum length")
 
 
-def train_args():
+def print_args(args):
+    args = vars(args)
+
+    print('\n\n\n', '*' * 19)
+    print('Arguments:\n', json.dumps(args, indent=4))
+    print('*' * 19, '\n\n\n')
+
+
+def train_args(verbose: bool = VERBOSE):
     parser = ArgumentParser()
+
     add_base_options(parser)
     add_data_options(parser)
     add_model_options(parser)
     add_diffusion_options(parser)
     add_training_options(parser)
     add_frame_sampler_options(parser)
-    return parser.parse_args()
+
+    args = parser.parse_args()
+    if verbose:
+        print_args(args)
+    return args
 
 
-def train_multi_args():
+def train_multi_args(verbose: bool = VERBOSE):
     parser = ArgumentParser()
+
     # args specified by the user: (all other will be loaded from the model)
     add_base_options(parser)
     add_multi_options(parser)
     add_training_options(parser)
-    return parse_and_load_from_model(parser, task='multi_train')
+
+    args = parse_and_load_from_model(parser, task='multi_train')
+    if verbose:
+        print_args(args)
+    return args
 
 
-def train_inpainting_args():
+def train_inpainting_args(verbose: bool = VERBOSE):
     parser = ArgumentParser()
+
     add_base_options(parser)
     add_data_options(parser)
     add_model_options(parser)
     add_diffusion_options(parser)
     add_training_options(parser)
     add_inpainting_options(parser)
-    return parser.parse_args()
+
+    args = parser.parse_args()
+    if verbose:
+        print_args(args)
+    return args
 
 
-def generate_multi_args():
+def generate_multi_args(verbose: bool = VERBOSE):
     parser = ArgumentParser()
+
     # args specified by the user: (all other will be loaded from the model)
     add_base_options(parser)
     add_sampling_options(parser)
     add_multi_options(parser)
     add_generate_options(parser)
-    return parse_and_load_from_model(parser, task='multi_sample')
+
+    args = parse_and_load_from_model(parser, task='multi_sample')
+    if verbose:
+        print_args(args)
+    return args
 
 
-def generate_args():
+def generate_args(verbose: bool = VERBOSE):
     parser = ArgumentParser()
+
     # args specified by the user: (all other will be loaded from the model)
     add_base_options(parser)
     add_sampling_options(parser)
     add_generate_options(parser)
     add_frame_sampler_options(parser)
     add_double_take_options(parser)
-    return parse_and_load_from_model(parser)
+
+    args = parse_and_load_from_model(parser)
+    if verbose:
+        print_args(args)
+    return args
 
 
-def edit_args():
+def edit_args(verbose: bool = VERBOSE):
     parser = ArgumentParser()
+
     # args specified by the user: (all other will be loaded from the model)
     add_base_options(parser)
     add_sampling_options(parser)
     add_edit_options(parser)
-    return parse_and_load_from_model(parser)
+
+    args = parse_and_load_from_model(parser)
+    if verbose:
+        print_args(args)
+    return args
 
 
-def edit_inpainting_args():
+def edit_inpainting_args(verbose: bool = VERBOSE):
     parser = ArgumentParser()
+
     # args specified by the user: (all other will be loaded from the model)
     add_base_options(parser)
     add_sampling_options(parser)
     add_edit_inpainting_options(parser)
-    return parse_and_load_from_multiple_models(parser, task='inpainting')
+
+    args = parse_and_load_from_multiple_models(parser, task='inpainting')
+    if verbose:
+        print_args(args)
+    return args
 
 
-def edit_double_take_args():
+def edit_double_take_args(verbose: bool = VERBOSE):
     parser = ArgumentParser()
+
     # args specified by the user: (all other will be loaded from the model)
     add_base_options(parser)
     add_sampling_options(parser)
     add_edit_options(parser)
     add_frame_sampler_options(parser)
     add_double_take_options(parser)
-    return parse_and_load_from_model(parser)
+
+    args = parse_and_load_from_model(parser)
+    if verbose:
+        print_args(args)
+    return args
 
 
-def edit_multi_args():
+def edit_multi_args(verbose: bool = VERBOSE):
     parser = ArgumentParser()
+
     # args specified by the user: (all other will be loaded from the model)
     add_base_options(parser)
     add_sampling_options(parser)
     add_multi_options(parser)
     add_edit_options(parser)
-    return parse_and_load_from_model(parser, task='multi_sample')
+
+    args = parse_and_load_from_model(parser, task='multi_sample')
+    if verbose:
+        print_args(args)
+    return args
 
 
-def evaluation_parser():
+def evaluation_parser(verbose: bool = VERBOSE):
     parser = ArgumentParser()
+
     # args specified by the user: (all other will be loaded from the model)
     add_base_options(parser)
     add_evaluation_options(parser)
-    return parse_and_load_from_model(parser)
+
+    args = parse_and_load_from_model(parser)
+    if verbose:
+        print_args(args)
+    return args
 
 
-def evaluation_double_take_parser():
+def evaluation_double_take_parser(verbose: bool = VERBOSE):
     parser = ArgumentParser()
+
     # args specified by the user: (all other will be loaded from the model)
     add_base_options(parser)
     add_evaluation_options(parser)
     add_frame_sampler_options(parser)
     add_double_take_options(parser)
     add_evaluation_double_take_options(parser)
-    return parse_and_load_from_model(parser)
+
+    args = parse_and_load_from_model(parser)
+    if verbose:
+        print_args(args)
+    return args
 
 
-def evaluation_multi_parser():
+def evaluation_multi_parser(verbose: bool = VERBOSE):
     parser = ArgumentParser()
+
     # args specified by the user: (all other will be loaded from the model)
     add_base_options(parser)
     add_multi_options(parser)
     add_evaluation_options(parser)
-    return parse_and_load_from_model(parser, task='multi_sample')
+
+    args = parse_and_load_from_model(parser, task='multi_sample')
+    if verbose:
+        print_args(args)
+    return args
 
 
-def evaluation_inpainting_parser():
+def evaluation_inpainting_parser(verbose: bool = VERBOSE):
     parser = ArgumentParser()
+
     # args specified by the user: (all other will be loaded from the model)
     add_base_options(parser)
     add_evaluation_options(parser)
     add_inpainting_options(parser)
-    return parse_and_load_from_multiple_models(parser, task='inpainting')
+
+    args = parse_and_load_from_multiple_models(parser, task='inpainting')
+    if verbose:
+        print_args(args)
+    return args
 
 
-def smplh_args():
+def smplh_args(verbose: bool = VERBOSE):
     parser = ArgumentParser()
+
     add_base_options(parser)
-    return parse_and_load_from_model(parser)
+
+    args = parse_and_load_from_model(parser)
+    if verbose:
+        print_args(args)
+    return args
 

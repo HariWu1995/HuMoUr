@@ -6,8 +6,8 @@ from torch.utils.data import Dataset, DataLoader
 
 from src.utils import dist_util
 
-from src.mdm.data_loaders.humanml.networks.modules import *
-from src.mdm.data_loaders.humanml.networks.trainers import CompTrainerV6
+from src.mdm_syn.data_loaders.humanml.networks.modules import *
+from src.mdm_syn.data_loaders.humanml.networks.trainers import CompTrainerV6
 
 
 def build_models(opt):

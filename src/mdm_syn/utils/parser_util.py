@@ -1,11 +1,20 @@
 import os
 import json
+import sys
 
-from argparse import ArgumentParser
 import argparse
+from argparse import ArgumentParser
 
 
 VERBOSE = os.environ.get('ARGUMENT_VERBOSE', True)
+
+
+def print_args(args):
+    args = vars(args)
+
+    print('\n\n\n', '*' * 19)
+    print('Arguments:\n', json.dumps(args, indent=4))
+    print('*' * 19, '\n\n\n')
 
 
 def parse_and_load_from_model(parser):
@@ -14,20 +23,17 @@ def parse_and_load_from_model(parser):
     add_data_options(parser)
     add_model_options(parser)
     add_diffusion_options(parser)
+    add_single_motion_options(parser)
 
     args = parser.parse_args()
     args_to_overwrite = []
-    for group_name in ['dataset', 'model', 'diffusion']:
+    for group_name in ['dataset', 'model', 'diffusion', 'single_motion']:
         args_to_overwrite += get_args_per_group_name(parser, args, group_name)
 
     # load args from model
-    if (args.model_config_path is not None) \
-    and (args.model_config_path != ''):
-        args_path = args.model_config_path
-    else:
-        model_path = get_model_path_from_args()
-        args_path = os.path.join(os.path.dirname(model_path), 'args.json')
-    assert os.path.exists(args_path), 'Arguments json file was not found!'
+    model_path = get_model_path_from_args()
+    args_path = os.path.join(os.path.dirname(model_path), 'args.json')
+    assert os.path.exists(args_path), f'Arguments json file {args_path} was not found!'
     with open(args_path, 'r') as fr:
         model_args = json.load(fr)
 
@@ -37,15 +43,13 @@ def parse_and_load_from_model(parser):
         if a in model_args.keys():
             setattr(args, a, model_args[a])
 
-        elif 'cond_mode' in model_args: # backward compitability
+        elif 'cond_mode' in model_args: # backward compatability
             unconstrained = (model_args['cond_mode'] == 'no_cond')
             setattr(args, 'unconstrained', unconstrained)
 
         else:
             print('Warning: was not able to load [{}], using default value [{}] instead.'.format(a, args.__dict__[a]))
 
-    if args.cond_mask_prob == 0:
-        args.guidance_param = 1
     return args
 
 
@@ -89,30 +93,72 @@ def add_diffusion_options(parser):
 
 def add_model_options(parser):
     group = parser.add_argument_group('model')
-    group.add_argument("--arch", default='trans_enc', choices=['trans_enc', 'trans_dec', 'gru'], type=str,
+    group.add_argument("--arch", default='qna', choices=['trans_enc', 'trans_dec', 'gru', 'unet', 'qna'], type=str,
                        help="Architecture types as reported in the paper.")
     group.add_argument("--emb_trans_dec", default=False, type=bool,
                        help="For trans_dec architecture only, if true, will inject condition as a class token"
                             " (in addition to cross-attention).")
     group.add_argument("--layers", default=8, type=int, help="Number of layers.")
-    group.add_argument("--latent_dim", default=512, type=int, help="Transformer/GRU width.")
+    group.add_argument("--latent_dim", default=128, type=int, help="Transformer/GRU width.")
     group.add_argument("--cond_mask_prob", default=.1, type=float,
                        help="The probability of masking the condition during training."
                             " For classifier-free guidance learning.")
-    group.add_argument("--lambda_rcxyz", default=0.0, type=float, help="Joint positions loss.")
-    group.add_argument("--lambda_vel", default=0.0, type=float, help="Joint velocity loss.")
-    group.add_argument("--lambda_fc", default=0.0, type=float, help="Foot contact loss.")
     group.add_argument("--unconstrained", action='store_true',
                        help="Model is trained unconditionally. That is, it is constrained by neither text nor action. "
                             "Currently tested on HumanAct12 only.")
 
+    # UNET options
+    group.add_argument("--image_size", default=64, type=int, help="")
+    group.add_argument("--num_channels", default=256, type=int, help="")
+    group.add_argument("--num_res_blocks", default=1, type=int, help="")
+    group.add_argument("--num_heads", default=4, type=int, help="")
+    group.add_argument("--num_heads_upsample", default=-1, type=int, help="")
+    group.add_argument("--num_head_channels", default=-1, type=int, help="")
+    group.add_argument("--attention_resolutions", default="64,32", type=str, help="")
+    group.add_argument("--channel_mult", default="1", type=str, help="")
+    group.add_argument("--learn_sigma", action='store_true', help="")
+    group.add_argument("--dropout", default=0.5, type=float, help="")
+    group.add_argument("--class_cond", action='store_true', help="")
+    group.add_argument("--use_checkpoint", action='store_true', help="")
+    group.add_argument("--use_scale_shift_norm", action='store_true', help="")
+    group.add_argument("--resblock_updown", action='store_true', help="")
+    group.add_argument("--use_fp16", action='store_true', help="")
+    group.add_argument("--use_new_attention_order", action='store_true', help="")
+    parser.add_argument("--conv_1d", action=StoreBooleanAction, default=True, help="")
+    group.add_argument("--padding_mode", default='zeros', choices=['zeros', 'reflect', 'replicate', 'circular'], type=str,
+                       help="Padding mode during convolution. One of ['zeros', 'reflect', 'replicate', 'circular'].")
+    group.add_argument("--padding", default=1, type=int, help="")
+    group.add_argument("--lr_method", default=None, type=str, help="")
+    group.add_argument("--lr_step", default=None, type=int, help="")
+    group.add_argument("--lr_gamma", default=None, type=float, help="")
+    parser.add_argument("--use_attention", action=StoreBooleanAction, default=True, help="")
+    parser.add_argument("--use_qna", action=StoreBooleanAction, default=True, help="")
+
+    # QnA Options:
+    group.add_argument("--head_dim", default=32, type=int, help="")
+    group.add_argument("--num_downsample", default=0, type=int, help="")
+    group.add_argument("--drop_path", default=0.5, type=float, help="")
+    group.add_argument("--use_diffusion_query", action='store_true', help="")
+    group.add_argument("--kernel_size", default=3, type=int, help="")
+    group.add_argument("--use_global_pe", action="store_true", help="")
+
 
 def add_data_options(parser):
     group = parser.add_argument_group('dataset')
-    group.add_argument("--dataset", default='humanml', choices=['humanml', 'kit', 'humanact12', 'uestc'], type=str,
+    group.add_argument("--dataset", default='humanml', choices=['humanml', 'mixamo', 'bvh_general'], type=str,
                        help="Dataset name (choose from list).")
+    group.add_argument("--repr", default='6d', choices=['quat', '6d'], type=str,
+                       help="Motion representation (choose from list).")
     group.add_argument("--data_dir", default="", type=str,
                        help="If empty, will use defaults according to the specified dataset.")
+    group.add_argument("--num_joints", default="", type=str,
+                       help="If empty, will use defaults according to the specified dataset.")
+
+
+def add_single_motion_options(parser):
+    group = parser.add_argument_group(('single_motion'))
+    group.add_argument("--crop_ratio", default=3.6, type=float, help=".")
+    group.add_argument("--sin_path", type=str, help=".")
 
 
 def add_training_options(parser):
@@ -124,7 +170,8 @@ def add_training_options(parser):
     group.add_argument("--train_platform_type", default='NoPlatform', choices=['NoPlatform', 'ClearmlPlatform', 'TensorboardPlatform'], type=str,
                        help="Choose platform to log results. NoPlatform means no logging.")
     group.add_argument("--lr", default=1e-4, type=float, help="Learning rate.")
-    group.add_argument("--weight_decay", default=0.0, type=float, help="Optimizer weight decay.")
+    group.add_argument("--warmup_steps", default=0, type=int, help="Number of warmup steps")
+    group.add_argument("--weight_decay", default=0, type=float, help="Optimizer weight decay.")
     group.add_argument("--lr_anneal_steps", default=0, type=int, help="Number of learning rate anneal steps.")
     group.add_argument("--eval_batch_size", default=32, type=int,
                        help="Batch size during evaluation loop. Do not change this unless you know what you are doing. "
@@ -133,102 +180,77 @@ def add_training_options(parser):
                        help="Which split to evaluate on during training.")
     group.add_argument("--eval_during_training", action='store_true',
                        help="If True, will run evaluation during training.")
-    group.add_argument("--eval_rep_times", default=3, type=int,
+    group.add_argument("--eval_rep_times", default=1, type=int,
                        help="Number of repetitions for evaluation loop during training.")
-    group.add_argument("--eval_num_samples", default=1_000, type=int,
+    group.add_argument("--eval_num_samples", default=500, type=int,
                        help="If -1, will use all samples in the specified split.")
     group.add_argument("--log_interval", default=1_000, type=int,
                        help="Log losses each N steps")
-    group.add_argument("--save_interval", default=50_000, type=int,
+    group.add_argument("--save_interval", default=10_000, type=int,
                        help="Save checkpoints and run evaluation each N steps")
-    group.add_argument("--num_steps", default=600_000, type=int,
+    group.add_argument("--num_steps", default=60_000, type=int,
                        help="Training will stop after the specified number of steps.")
     group.add_argument("--num_frames", default=60, type=int,
-                       help="Limit for the maximal number of frames. In HumanML3D and KIT this field is ignored.")
+                       help="Limit for the maximal number of frames. In HumanML3D this field is ignored.")
     group.add_argument("--resume_checkpoint", default="", type=str,
                        help="If not empty, will start from the specified checkpoint (path to model###.pt file).")
+    group.add_argument("--gen_during_training", action='store_true',
+                       help="If True, will generate motions during training, on each save interval.")
+    group.add_argument("--gen_num_samples", default=4, type=int,
+                       help="Number of samples to sample while generating")
 
 
 def add_sampling_options(parser):
     group = parser.add_argument_group('sampling')
     group.add_argument("--model_path", required=True, type=str,
                        help="Path to model####.pt file to be sampled.")
-    group.add_argument("--model_config_path", default=None, type=str,
-                       help="Path to args.json file in model checkpoint folder.")
-    # group.add_argument("--human_model_path", default='./body_models/smpl', type=str,
-    #                    help="Path to 3D-model folder.")
-    group.add_argument("--output_dir", default='output', type=str,
+    group.add_argument("--output_dir", default='', type=str,
                        help="Path to results dir (auto created by the script). "
                             "If empty, will create dir in parallel to checkpoint.")
     group.add_argument("--num_samples", default=10, type=int,
                        help="Maximal number of prompts to sample, "
                             "if loading dataset from file, this field will be ignored.")
-    group.add_argument("--num_repetitions", default=3, type=int,
-                       help="Number of repetitions, per sample (text prompt/action)")
-    group.add_argument("--guidance_param", default=2.5, type=float,
-                       help="For classifier-free sampling - specifies the s parameter, as defined in the paper.")
 
 
 def add_generate_options(parser):
     group = parser.add_argument_group('generate')
-    group.add_argument("--motion_length", default=6.0, type=float,
+    group.add_argument("--motion_length", default=None, type=float,
                        help="The length of the sampled motion [in seconds]. "
                             "Maximum is 9.8 for HumanML3D (text-to-motion), and 2.0 for HumanAct12 (action-to-motion)")
-    group.add_argument("--input_text", default='', type=str,
-                       help="Path to a text file lists text prompts to be synthesized. If empty, will take text prompts from dataset.")
-    group.add_argument("--action_file", default='', type=str,
-                       help="Path to a text file that lists names of actions to be synthesized. Names must be a subset of dataset/uestc/info/action_classes.txt if sampling from uestc, "
-                            "or a subset of [warm_up,walk,run,jump,drink,lift_dumbbell,sit,eat,turn steering wheel,phone,boxing,throw] if sampling from humanact12. "
-                            "If no file is specified, will take action names from dataset.")
-    group.add_argument("--text_prompt", default='', type=str,
-                       help="A text prompt to be generated. If empty, will take text prompts from dataset.")
-    group.add_argument("--action_name", default='', type=str,
-                       help="An action name to be generated. If empty, will take text prompts from dataset.")
 
 
 def add_edit_options(parser):
     group = parser.add_argument_group('edit')
-    group.add_argument("--edit_mode", default='in_between', choices=['in_between', 'upper_body'], type=str,
+    group.add_argument("--edit_mode", default='in_betweening', choices=['in_betweening', 'expansion', 'upper_body',  'lower_body', 'harmonization'], type=str,
                        help="Defines which parts of the input motion will be edited.\n"
-                            "(1) in_between - suffix and prefix motion taken from input motion, middle motion is generated.\n"
-                            "(2) upper_body - lower body joints taken from input motion, upper body is generated.")
-    group.add_argument("--text_condition", default='', type=str,
-                       help="Editing will be conditioned on this text prompt. "
-                            "If empty, will perform unconditioned editing.")
+                            "(1) in_betweening - suffix and prefix motion taken from input motion, "
+                            "middle motion is generated.\n"
+                            "(2) expansion - prefix and suffix are generated,"
+                            "middle motion is taken from input motion.\n"
+                            "(3) upper_body - lower body joints taken from input motion, "
+                            "upper body is generated.\n"
+                            "(4) lower_body - upper body joints taken from input motion, "
+                            "lower body is generated.\n"
+                            "(5) harmonization - low frequencies are taken from the reference motion,"
+                            "high frequencies are generated")
     group.add_argument("--prefix_end", default=0.25, type=float,
-                       help="For in_between editing - Defines the end of input prefix (ratio from all frames).")
+                       help="For in_betweening editing - Defines the end of input prefix (ratio from all frames).")
     group.add_argument("--suffix_start", default=0.75, type=float,
-                       help="For in_between editing - Defines the start of input suffix (ratio from all frames).")
+                       help="For in_betweening editing - Defines the start of input suffix (ratio from all frames).")
+    group.add_argument("--prefix_length", default=0.15, type=float,
+                       help="For motion expansion - Defines the length of generated prefix (ratio from all frames of input).")
+    group.add_argument("--suffix_length", default=0.15, type=float,
+                       help="For motion expansion - Defines the length of generated suffix (ratio from all frames of input).")
+    group.add_argument("--ref_motion", type=str, default="", required=False,
+                       help="Refenrence motion to be used for editing.")
+    group.add_argument("--num_frames", type=int, default=-1, required=False,
+                       help="Limit for the maximal number of frames.")
 
 
 def add_evaluation_options(parser):
     group = parser.add_argument_group('eval')
     group.add_argument("--model_path", required=True, type=str,
                        help="Path to model####.pt file to be sampled.")
-    group.add_argument("--eval_mode", default='wo_mm', choices=['wo_mm', 'mm_short', 'debug', 'full'], type=str,
-                       help="wo_mm (t2m only) - 20 repetitions without multi-modality metric; "
-                            "mm_short (t2m only) - 5 repetitions with multi-modality metric; debug - short run, less accurate results."
-                            "full (a2m only) - 20 repetitions.")
-    group.add_argument("--guidance_param", default=2.5, type=float,
-                       help="For classifier-free sampling - specifies the s parameter, as defined in the paper.")
-
-
-def get_cond_mode(args):
-    if args.unconstrained:
-        cond_mode = 'no_cond'
-    elif args.dataset in ['kit', 'humanml']:
-        cond_mode = 'text'
-    else:
-        cond_mode = 'action'
-    return cond_mode
-
-
-def print_args(args):
-    args = vars(args)
-
-    print('\n\n\n', '*' * 19)
-    print('Arguments:\n', json.dumps(args, indent=4))
-    print('*' * 19, '\n\n\n')
 
 
 def train_args(verbose: bool = VERBOSE):
@@ -246,21 +268,34 @@ def train_args(verbose: bool = VERBOSE):
     return args
 
 
+def train_sin_args(verbose: bool = VERBOSE):
+    parser = ArgumentParser()
+
+    add_base_options(parser)
+    add_data_options(parser)
+    add_model_options(parser)
+    add_diffusion_options(parser)
+    add_training_options(parser)
+    add_single_motion_options(parser)
+    
+    # a single image network is unconstrained (for now)
+    args = sys.argv[1:] + ['--unconstrained', '--cond_mask_prob', '0']
+
+    args = parser.parse_args(args)
+    if verbose:
+        print_args(args)
+    return args
+
+
 def generate_args(verbose: bool = VERBOSE):
     parser = ArgumentParser()
-    
+
     # args specified by the user: (all other will be loaded from the model)
     add_base_options(parser)
     add_sampling_options(parser)
     add_generate_options(parser)
+
     args = parse_and_load_from_model(parser)
-    cond_mode = get_cond_mode(args)
-
-    if (args.input_text or args.text_prompt) and cond_mode != 'text':
-        raise Exception('Arguments input_text and text_prompt should not be used for an action condition. Please use action_file or action_name.')
-    elif (args.action_file or args.action_name) and cond_mode != 'action':
-        raise Exception('Arguments action_file and action_name should not be used for a text condition. Please use input_text or text_prompt.')
-
     if verbose:
         print_args(args)
     return args
@@ -273,8 +308,8 @@ def edit_args(verbose: bool = VERBOSE):
     add_base_options(parser)
     add_sampling_options(parser)
     add_edit_options(parser)
-    args = parse_and_load_from_model(parser)
 
+    args = parse_and_load_from_model(parser)
     if verbose:
         print_args(args)
     return args
@@ -286,8 +321,21 @@ def evaluation_parser(verbose: bool = VERBOSE):
     # args specified by the user: (all other will be loaded from the model)
     add_base_options(parser)
     add_evaluation_options(parser)
-    args = parse_and_load_from_model(parser)
 
+    args = parse_and_load_from_model(parser)
     if verbose:
         print_args(args)
     return args
+
+
+class StoreBooleanAction(argparse.Action):
+
+    def __call__(self, parser, namespace, values, option_string=None):
+
+        if values.lower() in ('true', 't', 'yes', 'y', '1'):
+            setattr(namespace, self.dest, True)
+        elif values.lower() in ('false', 'f', 'no', 'n', '0'):
+            setattr(namespace, self.dest, False)
+        else:
+            parser.error(
+                "Invalid value for --use_attention. Please provide either 'True' or 'False'.")
