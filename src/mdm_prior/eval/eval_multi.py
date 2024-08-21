@@ -2,9 +2,9 @@ import os
 import torch
 import numpy as np
 
-import utils.rotation_conversions as geometry
-from utils import dist_util
-from utils.seeding import fix_seed
+import src.utils.rotation_conversions as geometry
+from src.utils import dist_util
+from src.utils.seeding import fix_seed
 
 from src.mdm_prior.diffusion import logger
 

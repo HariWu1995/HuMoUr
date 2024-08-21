@@ -1,7 +1,7 @@
 # This code is based on https://github.com/Mathux/ACTOR.git
 import torch
 
-import utils.rotation_conversions as geometry
+import src.utils.rotation_conversions as geometry
 from src.mdm.model.smpl import SMPL, JOINTSTYPE_ROOT
 # from .get_model import JOINTSTYPES
 

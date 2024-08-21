@@ -11,8 +11,8 @@ import numpy as np
 import torch
 from torch.optim import AdamW
 
-from utils.misc import load_model_wo_clip
-from utils import dist_util
+from src.utils.misc import load_model_wo_clip
+from src.utils import dist_util
 
 from src.mdm_prior.diffusion import logger
 from src.mdm_prior.diffusion.fp16_util import MixedPrecisionTrainer

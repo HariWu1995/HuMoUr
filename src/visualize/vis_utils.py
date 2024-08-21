@@ -1,9 +1,9 @@
-import numpy as np
-from trimesh import Trimesh
 import os
 import torch
+import numpy as np
+from trimesh import Trimesh
 
-from visualize.simplify_loc2rot import joints2smpl
+from src.visualize.simplify_loc2rot import joints2smpl
 from src.mdm.model.rotation2xyz import Rotation2xyz
 
 
@@ -30,8 +30,10 @@ class npy2obj:
             print(f'Running SMPLify For sample [{sample_idx}], repetition [{rep_idx}], it may take a few minutes.')
             motion_tensor, opt_dict = self.j2s.joint2smpl(self.motions['motion'][self.absl_idx].transpose(2, 0, 1))  # [nframes, njoints, 3]
             self.motions['motion'] = motion_tensor.cpu().numpy()
+        
         elif self.nfeats == 6:
             self.motions['motion'] = self.motions['motion'][[self.absl_idx]]
+        
         self.bs, self.njoints, self.nfeats, self.nframes = self.motions['motion'].shape
         self.real_num_frames = self.motions['lengths'][self.absl_idx]
 
@@ -58,12 +60,12 @@ class npy2obj:
     
     def save_npy(self, save_path):
         data_dict = {
-            'motion': self.motions['motion'][0, :  , : , :self.real_num_frames],
-            'thetas': self.motions['motion'][0, :-1, : , :self.real_num_frames],
-  'root_translation': self.motions['motion'][0,  -1, :3, :self.real_num_frames],
-              'text': self.motions['text'][0],
-             'faces': self.faces,
-          'vertices': self.vertices[0, :, :, :self.real_num_frames],
-            'length': self.real_num_frames,
+                'motion': self.motions['motion'][0, :  , : , :self.real_num_frames],
+                'thetas': self.motions['motion'][0, :-1, : , :self.real_num_frames],
+      'root_translation': self.motions['motion'][0,  -1, :3, :self.real_num_frames],
+                  'text': self.motions['text'][0],
+                 'faces': self.faces,
+              'vertices': self.vertices[0, :, :, :self.real_num_frames],
+                'length': self.real_num_frames,
         }
         np.save(save_path, data_dict)

@@ -2,7 +2,7 @@
 import os
 import torch
 
-import utils.rotation_conversions as geometry
+import src.utils.rotation_conversions as geometry
 
 from src.mdm_prior.data_loaders.amass.transforms.rots2joints import SMPLH
 from src.mdm_prior.model.smpl import SMPL, JOINTSTYPE_ROOT

@@ -11,7 +11,7 @@ import numpy as np
 import torch
 from torch.optim import AdamW
 
-from utils import dist_util
+from src.utils import dist_util
 
 from src.mdm.diffusion import logger
 from src.mdm.diffusion.fp16_util import MixedPrecisionTrainer

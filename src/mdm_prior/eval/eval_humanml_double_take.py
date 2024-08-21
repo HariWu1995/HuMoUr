@@ -1,8 +1,8 @@
 from datetime import datetime
 from collections import OrderedDict
 
-from utils import dist_util
-from utils.seeding import fix_seed
+from src.utils import dist_util
+from src.utils.seeding import fix_seed
 
 from src.mdm_prior.diffusion import logger
 

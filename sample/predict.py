@@ -1,13 +1,13 @@
 import os
 import subprocess
-from typing import Any, List, Optional
+
 from argparse import Namespace
+from typing import Any, List, Optional
 
 import torch
-
 from cog import BasePredictor, Input, Path, BaseModel
 
-from utils import dist_util
+from src.utils import dist_util
 
 import src.mdm.data_loaders.humanml.utils.paramUtil as paramUtil
 from src.mdm.data_loaders.tensors import collate

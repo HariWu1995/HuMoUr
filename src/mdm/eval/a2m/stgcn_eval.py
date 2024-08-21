@@ -4,14 +4,15 @@ from tqdm import tqdm
 
 import torch
 from torch.utils.data import DataLoader
-from data_loaders.tensors import collate
 
+from src.md.data_loaders.tensors import collate
 from src.mdm.eval.a2m.stgcn.evaluate import Evaluation as STGCNEvaluation
-from .tools import format_metrics
 
-from utils.seeding import fix_seed
-from utils import dist_util
-import utils.rotation_conversions as geometry
+from src.utils.seeding import fix_seed
+from src.utils import dist_util
+import src.utils.rotation_conversions as geometry
+
+from .tools import format_metrics
 
 
 def convert_x_to_rot6d(x, pose_rep):

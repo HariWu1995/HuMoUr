@@ -6,7 +6,7 @@ import  numpy as np
 import torch
 from torch.utils.data import Dataset, DataLoader
 
-from utils import dist_util
+from src.utils import dist_util
 
 from src.mdm_prior.data_loaders.humanml.networks.modules import *
 from src.mdm_prior.data_loaders.humanml.networks.trainers import CompTrainerV6

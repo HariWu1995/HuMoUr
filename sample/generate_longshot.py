@@ -9,8 +9,8 @@ import numpy as np
 import pandas as pd
 import torch
 
-from utils import dist_util
-from utils.seeding import fix_seed
+from src.utils import dist_util
+from src.utils.seeding import fix_seed
 
 from src.mdm_prior.utils.model_util import load_model
 from src.mdm_prior.utils.parser_util import generate_args

@@ -2,7 +2,7 @@
 from copy import deepcopy
 import torch
 
-from utils import dist_util
+from src.utils import dist_util
 
 
 def unfold_sample_arb_len(sample, handshake_size, step_sizes, final_n_frames, model_kwargs):

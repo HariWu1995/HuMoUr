@@ -1,8 +1,10 @@
-import argparse
 import os
-from visualize import vis_utils
 import shutil
+import argparse
 from tqdm import tqdm
+
+from src.visualize import vis_utils
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()

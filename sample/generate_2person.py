@@ -8,9 +8,9 @@ import shutil
 import numpy as np
 import torch
 
-from utils import dist_util
-from utils.seeding import fix_seed
-import utils.rotation_conversions as geometry
+from src.utils import dist_util
+from src.utils.seeding import fix_seed
+import src.utils.rotation_conversions as geometry
 
 from src.mdm_prior.utils.model_util import create_model_and_diffusion, load_model
 from src.mdm_prior.utils.parser_util import generate_multi_args

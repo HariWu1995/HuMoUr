@@ -2,13 +2,14 @@ import os
 import copy
 import functools
 
-import numpy as np
 from tqdm import tqdm
+
+import numpy as np
 import torch
 from torch.utils.data import DataLoader
 
-from utils import dist_util
-from utils.seeding import fix_seed
+from src.utils import dist_util
+from src.utils.seeding import fix_seed
 
 from src.mdm.data_loaders.tensors import collate
 from src.mdm.eval.unconstrained.evaluate import evaluate_unconstrained_metrics

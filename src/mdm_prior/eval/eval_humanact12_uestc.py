@@ -6,8 +6,8 @@ import os
 import torch
 import re
 
-from utils import dist_util
-from utils.seeding import fix_seed
+from src.utils import dist_util
+from src.utils.seeding import fix_seed
 
 from src.mdm_prior.eval.a2m.tools import save_metrics
 from src.mdm_prior.model.cfg_sampler import ClassifierFreeSampleModel

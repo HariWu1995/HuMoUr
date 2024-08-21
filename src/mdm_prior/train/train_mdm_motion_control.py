@@ -8,8 +8,8 @@ import json
 import torch
 from torch.utils.data import DataLoader
 
-from utils import dist_util
-from utils.seeding import fix_seed
+from src.utils import dist_util
+from src.utils.seeding import fix_seed
 
 from src.mdm_prior.diffusion.respace import SpacedDiffusion
 from src.mdm_prior.diffusion.gaussian_diffusion_inpaint import GaussianDiffusionInpainting

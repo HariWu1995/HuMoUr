@@ -1,13 +1,15 @@
-import numpy as np
 import os
-import torch
-from visualize.joints2smpl.src import config
-import smplx
-import h5py
-from visualize.joints2smpl.src.smplify import SMPLify3D
-from tqdm import tqdm
-import utils.rotation_conversions as geometry
 import argparse
+import h5py
+from tqdm import tqdm
+
+import numpy as np
+import torch
+import smplx
+
+import src.utils.rotation_conversions as geometry
+from src.visualize.joints2smpl.src import config
+from src.visualize.joints2smpl.src.smplify import SMPLify3D
 
 
 class joints2smpl:
@@ -58,8 +60,6 @@ class joints2smpl:
         np.save(out_path, motions)
         exit()
 
-
-
     def joint2smpl(self, input_joints, init_params=None):
         _smplify = self.smplify # if init_params is None else self.smplify_fast
         pred_pose = torch.zeros(self.batch_size, 72).to(self.device)
@@ -69,7 +69,6 @@ class joints2smpl:
 
         # run the whole seqs
         num_seqs = input_joints.shape[0]
-
 
         # joints3d = input_joints[idx]  # *1.2 #scale problem [check first]
         keypoints_3d = torch.Tensor(input_joints).to(self.device).float()
@@ -115,6 +114,7 @@ class joints2smpl:
 
 
 if __name__ == '__main__':
+    
     parser = argparse.ArgumentParser()
     parser.add_argument("--input_path", type=str, required=True, help='Blender file or dir with blender files')
     parser.add_argument("--cuda", type=bool, default=True, help='')
