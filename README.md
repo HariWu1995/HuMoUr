@@ -1,36 +1,34 @@
-# [HuMoUr](https://github.com/HariWu1995/HuMoUr): Human-Motion Wrapper for [MDM](https://github.com/GuyTevet/motion-diffusion-model) and [PriorMDM](https://github.com/priorMDM/priorMDM) repos
+# [HuMoUr](https://github.com/HariWu1995/HuMoUr): Human-Motion Wrapper for the below repos
 
+✅ [MDM](https://github.com/GuyTevet/motion-diffusion-model)
+
+✅ [PriorMDM](https://github.com/priorMDM/priorMDM)
+
+⬜ [MoMo](https://github.com/MonkeySeeDoCG/MoMo)
+
+⬜ [SinMDM](https://github.com/SinMDM/SinMDM)
+
+⬜ [MAS](https://github.com/roykapon/MAS)
+
+⬜ [CaMDM](https://github.com/AIGAnimation/CAMDM)
 
 ## Getting started
 
-This code was tested on `Ubuntu 18.04.5 LTS` and requires:
+This code was tested on `Kaggle` and requires:
 
-* Python 3.7
-* conda3 or miniconda3
-* CUDA capable GPU (one is enough)
+* Python 3.10
+* GPU T4 x2
 
 ### 0. Setup environment
 
-Install ffmpeg (if not already installed):
+Install ffmpeg:
 
 ```shell
 sudo apt update
 sudo apt install ffmpeg
 ```
-For Windows use [this](https://www.geeksforgeeks.org/how-to-install-ffmpeg-on-windows/) instead.
 
-Setup conda env:
-```shell
-conda env create -f environment.yml
-conda activate mdm
-
-pip install git+https://github.com/openai/CLIP.git
-pip install git+https://github.com/GuyTevet/smplx.git
-
-python -m spacy download en_core_web_sm
-```
-
-Or install in your environment:
+Setup environment:
 ```shell
 !pip install -q git+https://github.com/openai/CLIP.git
 !pip install -q blis==0.7.8 chumpy==0.70 click==8.1.3 confection==0.0.2 \
