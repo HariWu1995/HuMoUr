@@ -4,9 +4,10 @@ import numpy as np
 import torch
         
 from src.mdm.data_loaders.tensors import collate
-from utils.misc import to_torch
-import utils.rotation_conversions as geometry
-# from utils.action_label_to_idx import action_label_to_idx
+
+from src.utils.misc import to_torch
+import src.utils.rotation_conversions as geometry
+# from src.utils.action_label_to_idx import action_label_to_idx
 
 
 class Dataset(torch.utils.data.Dataset):
