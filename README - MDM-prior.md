@@ -181,17 +181,17 @@ python -m sample.double_take --model_path ./save/my_humanml_trans_enc_512/model0
 ```
 Reproduce out of text file:
 ```shell
-python -m sample.double_take --model_path ./save/my_humanml_trans_enc_512/model000200000.pt --handshake_size 20 --blend_len 10 --input_text ./assets/dt_text_example.txt 
+python -m sample.double_take --model_path ./save/my_humanml_trans_enc_512/model000200000.pt --handshake_size 20 --blend_len 10 --input_text ./assets/MDM-prior/dt_text_example.txt 
 ```
 
 Reproduce out of csv file (can determine each sequence length):
 ```shell
-python -m sample.double_take --model_path ./save/my_humanml_trans_enc_512/model000200000.pt --handshake_size 20 --blend_len 10 --input_text ./assets/dt_csv_example.csv 
+python -m sample.double_take --model_path ./save/my_humanml_trans_enc_512/model000200000.pt --handshake_size 20 --blend_len 10 --input_text ./assets/MDM-prior/dt_csv_example.csv 
 ```
 
 It will look something like this:
 
-![example](assets/DoubleTake/doubleTake_example.gif)
+![example](assets/MDM-prior/DoubleTake/doubleTake_example.gif)
 
 </details>
 
@@ -203,12 +203,12 @@ It will look something like this:
 
 Reproduce paper text prompts:
 ```shell
-python -m sample.two_person_text2motion --model_path ./save/pw3d_text/model000100000.pt --input_text ./assets/two_person_text_prompts.txt
+python -m sample.two_person_text2motion --model_path ./save/pw3d_text/model000100000.pt --input_text ./assets/MDM-prior/two_person_text_prompts.txt
 ```
 
 It will look something like this:
 
-![example](assets/ComMDM/example_capoeira.gif)
+![example](assets/MDM-prior/ComMDM/example_capoeira.gif)
 
 **Prefix completion**
 
@@ -219,7 +219,7 @@ python -m sample.two_person_prefix_completion --model_path ./save/pw3d_prefix/mo
 
 It will look something like this:
 
-![example](assets/ComMDM/example_prefix.gif)
+![example](assets/MDM-prior/ComMDM/example_prefix.gif)
 
 Blue frames are the input prefix and orange frames are the generated completion.
 
@@ -245,7 +245,7 @@ python -m sample.finetuned_motion_control --model_path save/root_horizontal_fine
 
 It will look something like this:
 
-![example](assets/Fine-tuned_motion_control/root_control_example.gif)
+![example](assets/MDM-prior/Fine-tuned_motion_control/root_control_example.gif)
 
 Use `--show_input` if you wish to plot the motion from which the control features were taken from.
 
@@ -263,7 +263,7 @@ python -m sample.finetuned_motion_control --model_path save/left_wrist_finetuned
 
 It will look something like this:
 
-![example](assets/Fine-tuned_motion_control/left_wrist_control_example.gif)
+![example](assets/MDM-prior/Fine-tuned_motion_control/left_wrist_control_example.gif)
 
 Add a text condition with `--text_condition`. Note that by default, we use classifier-free-guidance with scale of 2.5.
 ```shell
@@ -280,7 +280,7 @@ python -m sample.finetuned_motion_control --model_path save/left_wrist_finetuned
 
 It will look something like this:
 
-![example](assets/Fine-tuned_motion_control/left_wrist_right_foot_control_example.gif)
+![example](assets/MDM-prior/Fine-tuned_motion_control/left_wrist_right_foot_control_example.gif)
 
 Add a text condition with `--text_condition`. Note that by default, we use classifier-free-guidance with scale of 2.5.
 ```shell
