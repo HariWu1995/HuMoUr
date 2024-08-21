@@ -2,6 +2,7 @@
 archive
 body_models
 dataset/HumanML3D
+.draft
 
 # Download objects
 *.crdownload

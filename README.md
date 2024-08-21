@@ -4,13 +4,14 @@
 
 ✅ [PriorMDM](https://github.com/priorMDM/priorMDM)
 
-⬜ [MoMo](https://github.com/MonkeySeeDoCG/MoMo)
-
 ⬜ [SinMDM](https://github.com/SinMDM/SinMDM)
 
 ⬜ [MAS](https://github.com/roykapon/MAS)
 
-⬜ [CaMDM](https://github.com/AIGAnimation/CAMDM)
+⬜ [MoMo](https://github.com/MonkeySeeDoCG/MoMo)
+
+⬜ [CAMDM](https://github.com/AIGAnimation/CAMDM)
+
 
 ## Getting started
 
@@ -18,6 +19,7 @@ This code was tested on `Kaggle` and requires:
 
 * Python 3.10
 * GPU T4 x2
+
 
 ### 0. Setup environment
 
