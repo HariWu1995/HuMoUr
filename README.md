@@ -55,6 +55,7 @@ Or install in your environment:
 ```bash
 bash prepare/download_smpl_files.sh
 ```
+</details>
 
 <details>
   <summary><b>Text to Motion</b></summary>
