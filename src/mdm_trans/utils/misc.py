@@ -1,8 +1,12 @@
 import os
-import collections
 import random
 
 import torch
+
+try:
+    from collections import Mapping, Sequence
+except AttributeError:
+    from collections.abc import Mapping, Sequence
 
 
 def rename_files(directory, from_str, to_str):
@@ -48,11 +52,11 @@ def recursive_op2(x, y, op):
 
     assert type(x) == type(y)
 
-    if isinstance(x, collections.Mapping):
+    if isinstance(x, Mapping):
         assert x.keys() == y.keys()
         return {k: recursive_op2(v1, v2, op) for (k, v1), v2 in zip(x.items(), y.values())}
 
-    elif isinstance(x, collections.Sequence) and not isinstance(x, str):
+    elif isinstance(x, Sequence) and not isinstance(x, str):
         Warning('recursive_op2 on a sequence has never been tested')
         return [recursive_op2(v1, v2, op) for v1, v2 in zip(x, y)]
 
@@ -66,10 +70,10 @@ def recursive_op2(x, y, op):
 
 def recursive_op1(x, op, **kwargs):
 
-    if isinstance(x, collections.Mapping):
+    if isinstance(x, Mapping):
         return {k: recursive_op1(v, op, **kwargs) for (k, v) in x.items()}
 
-    elif isinstance(x, collections.Sequence) and not isinstance(x, str):
+    elif isinstance(x, Sequence) and not isinstance(x, str):
         return [recursive_op1(v, op, **kwargs) for v in x]
 
     elif isinstance(x, tuple):
