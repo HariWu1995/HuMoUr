@@ -16,12 +16,12 @@ from src.utils.seeding import fix_seed
 from src.mdm_syn.utils.parser_util import generate_args
 from src.mdm_syn.utils.model_util import create_model_and_diffusion, load_model
 
-import src.mdm_syn.data_loaders.humanml.utils.paramUtil as paramUtil
+from src.mdm_syn.data_loaders.tensors import collate
 from src.mdm_syn.data_loaders.get_data import get_dataset_loader
+from src.mdm_syn.data_loaders.mixamo.motion import MotionData
 from src.mdm_syn.data_loaders.humanml.scripts.motion_process import recover_from_ric
 from src.mdm_syn.data_loaders.humanml.utils.plot_script import plot_3d_motion
-from src.mdm_syn.data_loaders.mixamo.motion import MotionData
-from src.mdm_syn.data_loaders.tensors import collate
+import src.mdm_syn.data_loaders.humanml.utils.paramUtil as paramUtil
 
 from src.mdm_syn.motion import BVH
 from src.mdm_syn.motion.transforms import repr6d2quat
@@ -37,6 +37,7 @@ def main():
     out_path = args.output_dir
     name = os.path.basename(os.path.dirname(args.model_path))
     niter = os.path.basename(args.model_path).replace('model', '').replace('.pt', '')
+    
     motion_data = None
     num_joints = None
     repr = 'repr6d' if args.repr == '6d' else 'quat'
