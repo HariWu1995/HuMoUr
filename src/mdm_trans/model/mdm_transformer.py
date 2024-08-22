@@ -6,10 +6,10 @@ import torch.nn.functional as F
 from torch import Tensor, LongTensor
 from torch.nn.modules.transformer import _get_seq_len, _detect_is_causal_mask
 
-F.multi_head_attention_forward = multi_head_attention_forward
-
 # from src.mdm_trans.model.mdm_multiheadattention import MDM_MultiheadAttention as MultiheadAttention
 from src.mdm_trans.model.mdm_multiheadattention import multi_head_attention_forward
+
+F.multi_head_attention_forward = multi_head_attention_forward
 
 # derived and partially replicated 
 # from torch/nn/modules/transformer.py (pytorch 2.3.1, pytorch-cuda 12.1)
