@@ -16,6 +16,13 @@ def rename_files(directory, from_str, to_str):
                 os.rename(old_file_path, new_file_path)
 
 
+def tensor_to_device(x, device):
+    if isinstance(x, torch.Tensor):
+        return x.to(device)
+    else:
+        return x
+
+        
 def wrapped_getattr(self, name, default=None, wrapped_member_name='model'):
     ''' 
     should be called from wrappers of model classes such as ClassifierFreeSampleModel
