@@ -6,7 +6,7 @@ from src.mdm_syn.data_utils.tensors import t2m_collate
 
 def get_dataset_class(name):
     if name == "humanml":
-        from data_utils.humanml.data.dataset import HumanML3D
+        from src.mdm_syn.data_utils.humanml.data.dataset import HumanML3D
         return HumanML3D
     else:
         raise ValueError(f'Unsupported dataset name [{name}]')

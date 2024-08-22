@@ -4,7 +4,7 @@
 
 ✅ [PriorMDM](https://github.com/priorMDM/priorMDM)
 
-⬜ [SinMDM](https://github.com/SinMDM/SinMDM)
+✅ [SinMDM](https://github.com/SinMDM/SinMDM)
 
 ⬜ [MAS](https://github.com/roykapon/MAS)
 
