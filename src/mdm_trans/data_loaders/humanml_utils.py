@@ -6,7 +6,7 @@ import torch
 import einops
 
 from src.utils import dist_util
-from src.mdm_trans.utils.misc import Normalizer
+from src.mdm_trans.utils.norm_utils import Normalizer
 
 
 HML_JOINT_NAMES = [
