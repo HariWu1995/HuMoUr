@@ -4,9 +4,14 @@ import math
 import torch
 from torch import Tensor
 from torch.overrides import (has_torch_function, handle_torch_function)
-from torch.nn.functional import _mha_shape_check, _in_projection_packed, _in_projection, linear, softmax, dropout, _canonical_mask, pad, _none_or_dtype, scaled_dot_product_attention
+from torch.nn.functional import (
+    _mha_shape_check, _in_projection_packed, _in_projection, linear, softmax, 
+    dropout, _canonical_mask, pad, _none_or_dtype, scaled_dot_product_attention,
+)
 
-# copied from torch/nn/modules/transformer.py (pytorch 2.3.1, pytorch-cuda 12.1), then modified
+
+# copied and modified from 
+#   torch/nn/modules/transformer.py (pytorch 2.3.1, pytorch-cuda 12.1)
 
 def multi_head_attention_forward(
     query: Tensor,
@@ -75,7 +80,6 @@ def multi_head_attention_forward(
         average_attn_weights: If true, indicates that the returned ``attn_weights`` should be averaged across heads.
             Otherwise, ``attn_weights`` are provided separately per head. Note that this flag only has an effect
             when ``need_weights=True.``. Default: True
-
 
     Shape:
         Inputs:
@@ -196,12 +200,14 @@ def multi_head_attention_forward(
 
     assert embed_dim == embed_dim_to_check, \
         f"was expecting embedding dimension of {embed_dim_to_check}, but got {embed_dim}"
+    
     if isinstance(embed_dim, torch.Tensor):
         # embed_dim can be a tensor when JIT tracing
         head_dim = embed_dim.div(num_heads, rounding_mode='trunc')
     else:
         head_dim = embed_dim // num_heads
     assert head_dim * num_heads == embed_dim, f"embed_dim {embed_dim} not divisible by num_heads {num_heads}"
+    
     if use_separate_proj_weight:
         # allow MHA to have different embedding dimensions when separate projection weights are used
         assert key.shape[:2] == value.shape[:2], \
@@ -209,9 +215,7 @@ def multi_head_attention_forward(
     else:
         assert key.shape == value.shape, f"key shape {key.shape} does not match value shape {value.shape}"
 
-    #
     # compute in-projection
-    #
     if not use_separate_proj_weight:
         assert in_proj_weight is not None, "use_separate_proj_weight is False but in_proj_weight is None"
         q, k, v = _in_projection_packed(query, key, value, in_proj_weight, in_proj_bias)
@@ -226,7 +230,6 @@ def multi_head_attention_forward(
         q, k, v = _in_projection(query, key, value, q_proj_weight, k_proj_weight, v_proj_weight, b_q, b_k, b_v)
 
     # prep attention mask
-
     if attn_mask is not None:
         # ensure attn_mask's dim is 3
         if attn_mask.dim() == 2:
@@ -245,8 +248,10 @@ def multi_head_attention_forward(
     if bias_k is not None and bias_v is not None:
         assert static_k is None, "bias cannot be added to static key."
         assert static_v is None, "bias cannot be added to static value."
+
         k = torch.cat([k, bias_k.repeat(1, bsz, 1)])
         v = torch.cat([v, bias_v.repeat(1, bsz, 1)])
+
         if attn_mask is not None:
             attn_mask = pad(attn_mask, (0, 1))
         if key_padding_mask is not None:
@@ -255,10 +260,9 @@ def multi_head_attention_forward(
         assert bias_k is None
         assert bias_v is None
 
-    #
     # reshape q, k, v for multihead attention and make em batch first
-    #
     q = q.view(tgt_len, bsz * num_heads, head_dim).transpose(0, 1)
+
     if static_k is None:
         k = k.view(k.shape[0], bsz * num_heads, head_dim).transpose(0, 1)
     else:
@@ -268,6 +272,7 @@ def multi_head_attention_forward(
         assert static_k.size(2) == head_dim, \
             f"expecting static_k.size(2) of {head_dim}, but got {static_k.size(2)}"
         k = static_k
+
     if static_v is None:
         v = v.view(v.shape[0], bsz * num_heads, head_dim).transpose(0, 1)
     else:
@@ -306,10 +311,7 @@ def multi_head_attention_forward(
     if not training:
         dropout_p = 0.0
 
-    #
     # (deep breath) calculate attention and out projection
-    #
-
     if need_weights:
         B, Nt, E = q.shape
         q_scaled = q * math.sqrt(1.0 / float(E))
@@ -325,7 +327,6 @@ def multi_head_attention_forward(
             attn_output_weights = dropout(attn_output_weights, p=dropout_p)
 
         attn_output = torch.bmm(attn_output_weights, v)
-
         attn_output = attn_output.transpose(0, 1).contiguous().view(tgt_len * bsz, embed_dim)
         attn_output = linear(attn_output, out_proj_weight, out_proj_bias)
         attn_output = attn_output.view(tgt_len, bsz, attn_output.size(1))
@@ -335,6 +336,7 @@ def multi_head_attention_forward(
         q = q.view(bsz, num_heads, tgt_len, embed_dim // num_heads)
         k = k.view(bsz, num_heads, src_len, embed_dim // num_heads)
         v = v.view(bsz, num_heads, src_len, embed_dim // num_heads)
+
         if average_attn_weights:
             attn_output_weights = attn_output_weights.mean(dim=1)
             q = q.mean(dim=1)
@@ -349,6 +351,7 @@ def multi_head_attention_forward(
             k = k.squeeze(0)
             v = v.squeeze(0)
         return attn_output, {'atn': attn_output_weights, 'q': q, 'k': k, 'v': v}
+
     else:
         # attn_mask can be either (L,S) or (N*num_heads, L, S)
         # if attn_mask's shape is (1, L, S) we need to unsqueeze to (1, 1, L, S)
@@ -372,3 +375,5 @@ def multi_head_attention_forward(
             # squeeze the output if input was unbatched
             attn_output = attn_output.squeeze(1)
         return attn_output, None
+
+

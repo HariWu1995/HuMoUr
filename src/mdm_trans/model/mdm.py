@@ -1,21 +1,29 @@
 import numpy as np
 import torch
 import torch.nn as nn
-import clip
-from model.BERT_encoder import load_bert
-from model.rotation2xyz import Rotation2xyz
-from model.mdm_transformer import MDM_TransformerDecoderLayer, MDM_TransformerDecoder
-from utils.misc import recursive_op2
 
+import clip
+
+from src.mdm_trans.utils.misc import recursive_op2
+
+from src.mdm_trans.utils.model.BERT_encoder import load_bert
+from src.mdm_trans.utils.model.rotation2xyz import Rotation2xyz
+from src.mdm_trans.utils.model.mdm_transformer import MDM_TransformerDecoderLayer, \
+                                                      MDM_TransformerDecoder
+
+
+# for debug
 normal_repr = torch.Tensor.__repr__
-torch.Tensor.__repr__ = lambda self: f"{self.shape}_{normal_repr(self)}"  # for debug
+torch.Tensor.__repr__ = lambda self: f"{self.shape}_{normal_repr(self)}"
 
 
 class MDM(nn.Module):
+
     def __init__(self, modeltype, njoints, nfeats, translation, glob, glob_rot,
                  latent_dim=256, ff_size=1024, num_layers=8, num_heads=4, dropout=0.1,
                  ablation=None, activation="gelu", legacy=False, dataset='amass', clip_dim=512,
                  arch='trans_enc', emb_trans_dec='cls_none_cross_tcond', clip_version=None, **kargs):
+        
         super().__init__()
 
         self.legacy = legacy
@@ -29,7 +37,6 @@ class MDM(nn.Module):
         self.translation = translation
 
         self.latent_dim = latent_dim
-
         self.ff_size = ff_size
         self.num_layers = num_layers
         self.num_heads = num_heads
@@ -87,27 +94,30 @@ class MDM(nn.Module):
         else:
             raise ValueError('Please choose correct architecture [trans_enc, trans_dec, gru]')
 
-        self.embed_timestep = TimestepEmbedder(self.latent_dim, PositionalEncoding(self.latent_dim, self.dropout,
-                                                                                   max_len=max(1000, self.diffusion_steps)))
-
+        self.embed_timestep = TimestepEmbedder(self.latent_dim, 
+                                                PositionalEncoding(self.latent_dim, 
+                                                                   self.dropout,
+                                                                   max_len=max(1000, self.diffusion_steps)))
         if self.cond_mode != 'no_cond':
             if 'text' in self.cond_mode:
                 # We support CLIP encoder and DistilBERT
                 print('EMBED TEXT')
                 
                 self.text_encoder_type = kargs.get('text_encoder_type', 'clip')
-                
                 if self.text_encoder_type == "clip":
                     print('Loading CLIP...')
                     self.clip_model = self.load_and_freeze_clip(clip_version)
                     self.encode_text = self.clip_encode_text
+
                 elif self.text_encoder_type == 'bert':
                     assert 'trans_dec' in self.arch
                     print("Loading BERT...")
                     bert_model_path = 'distilbert/distilbert-base-uncased'
                     self.bert_model = load_bert(bert_model_path)
+
                     self.encode_text = self.bert_encode_text
                     self.llm_dim = 768
+
                     if self.trans_dec_w_cls():
                         print("Loading CLIP too...")
                         self.clip_model = self.load_and_freeze_clip(clip_version)
@@ -119,18 +129,17 @@ class MDM(nn.Module):
                 if self.text_encoder_type == 'bert' and self.trans_dec_w_cls():
                     self.embed_text_clip = nn.Linear(clip_dim, self.latent_dim)
                 
-        self.output_process = OutputProcess(self.input_feats, self.latent_dim, self.njoints,
-                                            self.nfeats)
+        self.output_process = OutputProcess(self.input_feats, self.latent_dim, self.njoints, self.nfeats)
         self.rot2xyz = Rotation2xyz(device='cpu', dataset=self.dataset)
 
     def parameters_wo_clip(self):
         return [p for name, p in self.named_parameters() if not name.startswith('clip_model.')]
 
     def load_and_freeze_clip(self, clip_version):
-        clip_model, clip_preprocess = clip.load(clip_version, device='cpu',
-                                                jit=False)  # Must set jit=False for training
-        clip.model.convert_weights(
-            clip_model)  # Actually this line is unnecessary since clip by default already on float16
+        # Must set jit=False for training
+
+        clip_model, clip_preprocess = clip.load(clip_version, device='cpu', jit=False)
+        clip.model.convert_weights(clip_model)  # Actually this line is unnecessary since clip by default already on float16
 
         # Freeze CLIP weights
         clip_model.eval()
@@ -141,15 +150,19 @@ class MDM(nn.Module):
 
     def mask_cond(self, cond, force_mask=False):
         seq_len, bs, d = cond.shape
+
         if force_mask:
             return torch.zeros_like(cond)
+
         elif self.training and self.cond_mask_prob > 0.:
             mask = torch.bernoulli(torch.ones(bs, device=cond.device) * self.cond_mask_prob).view(1, bs, 1)  # 1-> use null_cond, 0-> use real cond
             return cond * (1. - mask)
+
         else:
             return cond
 
     def clip_encode_text(self, raw_text):
+
         # raw_text - list (batch_size length) of strings with input text prompts
         device = next(self.parameters()).device
         max_text_len = 20 if self.dataset in ['humanml', 'kit'] else None  # Specific hardcoding for humanml dataset
@@ -178,7 +191,6 @@ class MDM(nn.Module):
         x: [batch_size, njoints, nfeats, max_frames], denoted x_t in the paper
         timesteps: [batch_size] (int)
         """
-
         bs, njoints, nfeats, nframes = x.shape
         if ref_features is None and features_mode == 'transfer' and (timesteps == self.diffusion_steps-1).all():
             # intialize the output data with the noise of the leader
@@ -189,15 +201,18 @@ class MDM(nn.Module):
         if y.get('uncond', False):
             features_mode = None
         force_mask = y.get('uncond', False)
+
         if 'text' in self.cond_mode:
             if 'text_embed' in y.keys():  # caching option
                 enc_text = y['text_embed']
             else:
                 enc_text = self.encode_text(y['text'])
+
             if self.trans_dec_w_cls():
                 enc_text_clip = self.encode_text_clip(y['text'])
             if type(enc_text) == tuple:
                 enc_text, text_mask = enc_text
+
             if self.emb_before_mask:
                 emb_text = self.mask_cond(self.embed_text(enc_text), force_mask=force_mask)
                 # emb = self.mask_cond(self.embed_text(enc_text), force_mask=force_mask) + emb_step
@@ -260,11 +275,14 @@ class MDM(nn.Module):
             else:
                 xseq = x
             xseq = self.sequence_pos_encoder(xseq)  # [seqlen+1, bs, d]
+
             if self.text_encoder_type == 'clip':
                 output = self.seqTransDecoder(tgt=xseq, memory=emb, tgt_key_padding_mask=frames_mask)
+            
             elif self.text_encoder_type == 'bert':
                 if timesteps[0] not in self.get_feat_idx.get('step', []): 
                     features_mode = None
+
                 step_i = f'step{timesteps[0]:03d}'
                 if features_mode == 'transfer' and ref_features is not None:
                     assert step_i in ref_features
@@ -292,11 +310,9 @@ class MDM(nn.Module):
     def trans_dec_w_cls(self):
         return 'cls_none' not in self.emb_trans_dec
 
-
     def _apply(self, fn):
         super()._apply(fn)
         # self.rot2xyz.smpl_model._apply(fn)  # todo: uncomment after smpl is installed
-
 
     def train(self, *args, **kwargs):
         super().train(*args, **kwargs)
@@ -304,6 +320,7 @@ class MDM(nn.Module):
 
 
 class PositionalEncoding(nn.Module):
+
     def __init__(self, d_model, dropout=0.1, max_len=1000):
         super(PositionalEncoding, self).__init__()
         self.dropout = nn.Dropout(p=dropout)
@@ -325,6 +342,7 @@ class PositionalEncoding(nn.Module):
 
 # For 2D embedding for mat representation
 class DualPositionalEncoding(PositionalEncoding):
+
     def __init__(self, d_model, dropout=0.1, max_len=1000):
         super(DualPositionalEncoding, self).__init__(d_model//2, dropout, max_len)
         self.concat_pe = torch.tensor([])  # cache
@@ -333,13 +351,16 @@ class DualPositionalEncoding(PositionalEncoding):
         # not used in the final model
         if x.shape[0] != self.concat_pe.shape[0]:
             temporal_pe = self.pe[:x.shape[0], :].unsqueeze(1).tile([1,1,x.shape[2],1])
-            joint_pe = self.pe[:x.shape[2], :].unsqueeze(1).permute(1,2,0,3).tile([x.shape[0],1,1,1])
+            joint_pe    = self.pe[:x.shape[2], :].unsqueeze(1)\
+                                             .permute(1,2,0,3).tile([x.shape[0],1,1,1])
             self.concat_pe = torch.cat([temporal_pe, joint_pe], dim=-1)
+
         x = x + self.concat_pe
         return self.dropout(x)
 
 
 class TimestepEmbedder(nn.Module):
+
     def __init__(self, latent_dim, sequence_pos_encoder):
         super().__init__()
         self.latent_dim = latent_dim
@@ -353,10 +374,12 @@ class TimestepEmbedder(nn.Module):
         )
 
     def forward(self, timesteps):
-        return self.time_embed(self.sequence_pos_encoder.pe[timesteps]).permute(1, 0, 2)
+        return self.time_embed(
+            self.sequence_pos_encoder.pe[timesteps]).permute(1, 0, 2)
 
 
 class InputProcess(nn.Module):
+
     def __init__(self, input_feats, latent_dim):
         super().__init__()
         self.input_feats = input_feats
@@ -373,6 +396,7 @@ class InputProcess(nn.Module):
 
 
 class OutputProcess(nn.Module):
+
     def __init__(self, input_feats, latent_dim, njoints, nfeats):
         super().__init__()
         self.input_feats = input_feats
@@ -387,3 +411,4 @@ class OutputProcess(nn.Module):
         output = output.reshape(nframes, bs, self.njoints, self.nfeats)
         output = output.permute(1, 2, 3, 0)  # [bs, njoints, nfeats, nframes]
         return output
+

@@ -1,6 +1,7 @@
 # This code is based on https://github.com/Mathux/ACTOR.git
 import torch
-import utils.rotation_conversions as geometry
+
+import src.utils.rotation_conversions as geometry
 
 
 # from model.smpl import SMPL, JOINTSTYPE_ROOT  # todo: check if needs to be returned
@@ -9,6 +10,7 @@ JOINTSTYPES = ["a2m", "a2mpl", "smpl", "vibe", "vertices"]
 
 
 class Rotation2xyz:
+
     def __init__(self, device, dataset='amass'):
         self.device = device
         self.dataset = dataset
@@ -17,6 +19,7 @@ class Rotation2xyz:
     def __call__(self, x, mask, pose_rep, translation, glob,
                  jointstype, vertstrans, betas=None, beta=0,
                  glob_rot=None, get_rotations_back=False, **kwargs):
+
         if pose_rep == "xyz":
             return x
 
@@ -31,7 +34,7 @@ class Rotation2xyz:
 
         if translation:
             x_translations = x[:, -1, :3]
-            x_rotations = x[:, :-1]
+            x_rotations    = x[:, :-1]
         else:
             x_rotations = x
 
@@ -63,7 +66,9 @@ class Rotation2xyz:
                                 dtype=rotations.dtype, device=rotations.device)
             betas[:, 1] = beta
             # import ipdb; ipdb.set_trace()
-        out = self.smpl_model(body_pose=rotations, global_orient=global_orient, betas=betas)
+    
+        out = self.smpl_model(body_pose=rotations, 
+                            global_orient=global_orient, betas=betas)
 
         # get the desirable joints
         joints = out[jointstype]

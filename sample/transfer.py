@@ -20,12 +20,15 @@ from src.mdm_trans.data_loaders.humanml_utils import HumanMlNormalizer, load_mot
 
 
 def main():
-    args = transfer_args()
-    
+
+    args = transfer_args()    
     get_feat_idx, transfer_idx = get_transfer_args(args)
-    additional_model_args = {'get_feat_idx': get_feat_idx, 'transfer_idx': transfer_idx}
     
-    data, model, diffusion = init_main(args, additional_model_args)   
+    extra_model_args = {
+        'get_feat_idx': get_feat_idx, 
+        'transfer_idx': transfer_idx,
+    }
+    data, model, diffusion = init_main(args, extra_model_args)   
     return transfer(args, data, model, diffusion)
 
 
@@ -35,7 +38,10 @@ def transfer(args, data, model, diffusion):
     
     # enable real motions via inversion
     if args.leader_motion_path or args.follower_motion_path:
-        assert args.n_follower_mult == 1, 'Inversion not implemented for n_follower_mult > 1'  # todo: rotate follower motions n_follower_mult times before inversion
+        
+        # TODO: rotate follower motions n_follower_mult times before inversion
+        assert args.n_follower_mult == 1, \
+            'Inversion not implemented for n_follower_mult > 1'  
         
         # load motions to invert
         motion_paths = [args.leader_motion_path] if args.leader_motion_path is not None else []
