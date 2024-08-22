@@ -4,11 +4,12 @@
 #
 ##############################
 from os.path import join as pjoin
+
 import numpy as np
 import torch
 import torch.nn.functional as F
 
-from src.mdm_syn.data_utils.mixamo.bvh.bvh_parser import BVH_file
+from src.mdm_syn.data_loaders.mixamo.bvh.bvh_parser import BVH_file
 from src.mdm_syn.motion.transforms import interpolate_6d
 
 

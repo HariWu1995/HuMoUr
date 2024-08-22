@@ -8,7 +8,7 @@ by Daniel Holden et al
 import re
 import numpy as np
 
-from src.mdm_syn.data_utils.mixamo.bvh.Quaternions import Quaternions
+from src.mdm_syn.data_loaders.mixamo.bvh.Quaternions import Quaternions
 
 
 channelmap = {

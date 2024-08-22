@@ -9,8 +9,8 @@ import numpy as np
 from ganimator_eval_kernel import prepare_group_cost
 from ganimator_eval_kernel import nn_dp as nn_dp_kernel
 
-from src.mdm_syn.data_utils.mixamo.bvh.bvh_parser import BVH_file
-from src.mdm_syn.data_utils.mixamo.bvh.bvh_writer import WriterWrapper
+from src.mdm_syn.data_loaders.mixamo.bvh.bvh_parser import BVH_file
+from src.mdm_syn.data_loaders.mixamo.bvh.bvh_writer import WriterWrapper
 
 from src.mdm_syn.motion.transforms import repr6d2quat
 

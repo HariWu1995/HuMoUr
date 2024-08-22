@@ -6,7 +6,7 @@
 import numpy as np
 import torch
 
-from src.mdm_syn.data_utils.mixamo.evaluations.patched_nn import group_cost_from_file
+from src.mdm_syn.data_loaders.mixamo.evaluations.patched_nn import group_cost_from_file
 
 
 def calc_perwindow_cost(group_cost, tmin, keepall=False):

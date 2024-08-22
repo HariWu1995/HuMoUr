@@ -1,6 +1,8 @@
-from data_utils.humanml.networks.modules import *
-from data_utils.humanml.utils.word_vectorizer import POS_enumerator
 from os.path import join as pjoin
+
+from src.mdm_syn.data_loaders.humanml.networks.modules import *
+from src.mdm_syn.data_loaders.humanml.utils.word_vectorizer import POS_enumerator
+
 
 def build_models(opt):
     movement_enc = MovementConvEncoder(opt.dim_pose-4, opt.dim_movement_enc_hidden, opt.dim_movement_latent)

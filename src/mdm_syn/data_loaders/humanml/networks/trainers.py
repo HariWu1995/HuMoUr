@@ -1,19 +1,23 @@
-import torch
-import torch.nn.functional as F
-import random
-from data_utils.humanml.networks.modules import *
-from torch.utils.data import DataLoader
-import torch.optim as optim
-from torch.nn.utils import clip_grad_norm_
-# import tensorflow as tf
-from collections import OrderedDict
-from data_utils.humanml.utils.utils import *
 from os.path import join as pjoin
-from data_utils.humanml.data.dataset import collate_fn
+from collections import OrderedDict
+
 import codecs as cs
+import random
+
+import torch
+import torch.optim as optim
+import torch.nn.functional as F
+from torch.nn.utils import clip_grad_norm_
+from torch.utils.data import DataLoader
+# import tensorflow as tf
+
+from src.mdm_syn.data_loaders.humanml.networks.modules import *
+from src.mdm_syn.data_loaders.humanml.utils.utils import *
+from src.mdm_syn.data_loaders.humanml.data.dataset import collate_fn
 
 
 class Logger(object):
+
   def __init__(self, log_dir):
     self.writer = tf.summary.create_file_writer(log_dir)
 

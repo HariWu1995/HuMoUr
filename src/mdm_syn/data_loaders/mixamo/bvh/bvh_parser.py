@@ -6,12 +6,12 @@
 import torch
 import numpy as np
 
-import src.mdm_syn.data_utils.mixamo.bvh.bvh_io as bvh_io
-from src.mdm_syn.data_utils.mixamo.bvh.skeleton_database import SkeletonDatabase
-from src.mdm_syn.data_utils.mixamo.bvh.Quaternions import Quaternions
-from src.mdm_syn.data_utils.mixamo.models.kinematics import ForwardKinematicsJoint
-from src.mdm_syn.data_utils.mixamo.models.contact import foot_contact
-from src.mdm_syn.data_utils.mixamo.bvh.bvh_writer import WriterWrapper
+import src.mdm_syn.data_loaders.mixamo.bvh.bvh_io as bvh_io
+from src.mdm_syn.data_loaders.mixamo.bvh.skeleton_database import SkeletonDatabase
+from src.mdm_syn.data_loaders.mixamo.bvh.Quaternions import Quaternions
+from src.mdm_syn.data_loaders.mixamo.models.kinematics import ForwardKinematicsJoint
+from src.mdm_syn.data_loaders.mixamo.models.contact import foot_contact
+from src.mdm_syn.data_loaders.mixamo.bvh.bvh_writer import WriterWrapper
 
 from src.mdm_syn.motion.transforms import quat2repr6d
 

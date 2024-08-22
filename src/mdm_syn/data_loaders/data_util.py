@@ -1,7 +1,7 @@
 import numpy as np
 import torch
 
-from src.mdm_syn.data_utils.mixamo.motion import MotionData
+from src.mdm_syn.data_loaders.mixamo.motion import MotionData
 
 from src.mdm_syn.motion.transforms import quat2repr6d
 from src.mdm_syn.motion import BVH
