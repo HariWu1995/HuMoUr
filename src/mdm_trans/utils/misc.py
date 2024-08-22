@@ -5,7 +5,7 @@ import torch
 
 try:
     from collections import Mapping, Sequence
-except AttributeError:
+except Exception:
     from collections.abc import Mapping, Sequence
 
 
