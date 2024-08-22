@@ -134,6 +134,7 @@ class GaussianDiffusion:
         lambda_root_vel=0.,
         lambda_vel_rcxyz=0.,
         lambda_fc=0.,
+        **kwargs
     ):
         self.model_mean_type = model_mean_type
         self.model_var_type = model_var_type

@@ -140,6 +140,7 @@ class GaussianDiffusion:
         lambda_fc=0.,
         batch_size=32,
         multi_train_mode=None,
+        **kwargs
     ):
         self.model_mean_type = model_mean_type
         self.model_var_type = model_var_type
