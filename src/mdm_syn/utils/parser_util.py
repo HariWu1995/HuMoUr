@@ -38,7 +38,7 @@ def parse_and_load_from_model(parser):
         model_args = json.load(fr)
 
     for a in args_to_overwrite:
-        if a == 'data_dir':
+        if a in ['data_dir','sin_path']:
             continue
         if a in model_args.keys():
             setattr(args, a, model_args[a])
