@@ -107,8 +107,8 @@ def main(args=None):
     if args.use_fp16:
         model.convert_to_fp16()
     model.eval()  # disable random masking
-
     model.requires_grad_(False)
+    
     if is_using_data:
         iterator = iter(data)
         _, model_kwargs = next(iterator)
@@ -125,7 +125,6 @@ def main(args=None):
     print(f'### Sampling')
 
     sample_fn = diffusion.p_sample_loop
-
     sample = sample_fn(
         model,
         (args.batch_size, model.njoints, model.nfeats, n_frames),

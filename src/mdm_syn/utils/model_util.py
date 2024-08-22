@@ -95,7 +95,6 @@ def get_model_args(args, data, num_joints):
         nfeats = 1
 
     elif args.dataset == 'mixamo':
-
         data_rep = 'mixamo_vec'
         if data is not None:
             njoints = data.raw_motion.shape[1]
@@ -107,7 +106,6 @@ def get_model_args(args, data, num_joints):
         nfeats = 1
 
     elif args.dataset == 'bvh_general':
-
         data_rep = 'bvh_general_vec'
         if data is not None:
             njoints = data.raw_motion.shape[1]
