@@ -9,7 +9,6 @@ import torch
 
 from src.utils import dist_util
 from src.utils.seeding import fix_seed
-from src.utils.visualize import plot_3d_motion
 
 from src.mdm_trans.data_loaders.humanml.scripts.motion_process import recover_from_ric
 from src.mdm_trans.data_loaders.tensors import collate, get_cond
@@ -18,6 +17,7 @@ from src.mdm_trans.data_loaders.get_data import get_dataset, dataset_loader_from
 from src.mdm_trans.model.cfg_sampler import ClassifierFreeSampleModel
 
 from src.mdm_trans.utils.model_util import create_model_and_diffusion, load_model_wo_clip
+from src.mdm_trans.utils.visualize import plot_3d_motion
 from src.mdm_trans.utils.misc import recursive_op1, tensor_to_device
 
 
