@@ -30,10 +30,8 @@ from src.mdm_syn.motion.Animation import Animation, positions_global as anim_pos
 from src.mdm_syn.motion.AnimationStructure import get_kinematic_chain
 
 
-def main(args=None):
-    if args is None:
-        # args is None unless this method is called from another function (e.g. during training)
-        args = generate_args()
+def main():
+    args = generate_args()
     fix_seed(args.seed)
 
     out_path = args.output_dir
@@ -108,7 +106,7 @@ def main(args=None):
         model.convert_to_fp16()
     model.eval()  # disable random masking
     model.requires_grad_(False)
-    
+
     if is_using_data:
         iterator = iter(data)
         _, model_kwargs = next(iterator)
