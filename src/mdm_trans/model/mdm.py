@@ -6,10 +6,10 @@ import clip
 
 from src.mdm_trans.utils.misc import recursive_op2
 
-from src.mdm_trans.utils.model.BERT_encoder import load_bert
-from src.mdm_trans.utils.model.rotation2xyz import Rotation2xyz
-from src.mdm_trans.utils.model.mdm_transformer import MDM_TransformerDecoderLayer, \
-                                                      MDM_TransformerDecoder
+from src.mdm_trans.model.BERT_encoder import load_bert
+from src.mdm_trans.model.rotation2xyz import Rotation2xyz
+from src.mdm_trans.model.mdm_transformer import MDM_TransformerDecoderLayer, \
+                                                MDM_TransformerDecoder
 
 
 # for debug
