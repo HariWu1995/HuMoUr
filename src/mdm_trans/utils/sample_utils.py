@@ -39,6 +39,8 @@ def get_sample_vars(args: int, data: int, model: int, texts: List[str],
         out_name = get_out_name(args)
         out_dir = os.path.dirname(args.model_path)
         out_path = os.path.join(out_dir, out_name)
+    else:
+        out_path = args.output_dir
 
     args.batch_size = args.num_samples
 
