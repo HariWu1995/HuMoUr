@@ -10,11 +10,11 @@ from src.utils import dist_util
 
 from src.mdm_syn.diffusion import logger
 
-from src.mdm_syn.data_utils.get_data import get_dataset_loader
-from src.mdm_syn.data_utils.humanml.utils.utils import *
-from src.mdm_syn.data_utils.humanml.utils.metrics import *
-from src.mdm_syn.data_utils.humanml.scripts.motion_process import *
-from src.mdm_syn.data_utils.humanml.networks.evaluator_wrapper import EvaluatorMDMWrapper
+from src.mdm_syn.data_loaders.get_data import get_dataset_loader
+from src.mdm_syn.data_loaders.humanml.utils.utils import *
+from src.mdm_syn.data_loaders.humanml.utils.metrics import *
+from src.mdm_syn.data_loaders.humanml.scripts.motion_process import *
+from src.mdm_syn.data_loaders.humanml.networks.evaluator_wrapper import EvaluatorMDMWrapper
 
 from src.mdm_syn.utils.model_util import create_model_and_diffusion, load_model
 

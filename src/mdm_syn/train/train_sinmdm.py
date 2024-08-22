@@ -11,7 +11,7 @@ import torch
 from src.utils import dist_util
 from src.utils.seeding import fix_seed
 
-from src.mdm_syn.data_utils.data_util import load_sin_motion
+from src.mdm_syn.data_loaders.data_util import load_sin_motion
 from src.mdm_syn.train.train_platforms import ClearmlPlatform, TensorboardPlatform, NoPlatform  # required for the eval operation
 from src.mdm_syn.train.training_loop import TrainLoop
 from src.mdm_syn.utils.parser_util import train_sin_args

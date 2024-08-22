@@ -1,12 +1,12 @@
 from torch.utils.data import DataLoader
 
-from src.mdm_syn.data_utils.tensors import collate as all_collate
-from src.mdm_syn.data_utils.tensors import t2m_collate
+from src.mdm_syn.data_loaders.tensors import collate as all_collate
+from src.mdm_syn.data_loaders.tensors import t2m_collate
 
 
 def get_dataset_class(name):
     if name == "humanml":
-        from src.mdm_syn.data_utils.humanml.data.dataset import HumanML3D
+        from src.mdm_syn.data_loaders.humanml.data.dataset import HumanML3D
         return HumanML3D
     else:
         raise ValueError(f'Unsupported dataset name [{name}]')
@@ -15,7 +15,7 @@ def get_dataset_class(name):
 def get_collate_fn(name, hml_mode='train'):
 
     if hml_mode == 'gt':
-        from src.mdm_syn.data_utils.humanml.data.dataset import collate_fn as t2m_eval_collate
+        from src.mdm_syn.data_loaders.humanml.data.dataset import collate_fn as t2m_eval_collate
         return t2m_eval_collate
 
     if name == "humanml":

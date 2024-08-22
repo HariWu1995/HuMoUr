@@ -16,12 +16,12 @@ from src.utils.seeding import fix_seed
 from src.mdm_syn.utils.parser_util import generate_args
 from src.mdm_syn.utils.model_util import create_model_and_diffusion, load_model
 
-import src.mdm_syn.data_utils.humanml.utils.paramUtil as paramUtil
-from src.mdm_syn.data_utils.get_data import get_dataset_loader
-from src.mdm_syn.data_utils.humanml.scripts.motion_process import recover_from_ric
-from src.mdm_syn.data_utils.humanml.utils.plot_script import plot_3d_motion
-from src.mdm_syn.data_utils.mixamo.motion import MotionData
-from src.mdm_syn.data_utils.tensors import collate
+import src.mdm_syn.data_loaders.humanml.utils.paramUtil as paramUtil
+from src.mdm_syn.data_loaders.get_data import get_dataset_loader
+from src.mdm_syn.data_loaders.humanml.scripts.motion_process import recover_from_ric
+from src.mdm_syn.data_loaders.humanml.utils.plot_script import plot_3d_motion
+from src.mdm_syn.data_loaders.mixamo.motion import MotionData
+from src.mdm_syn.data_loaders.tensors import collate
 
 from src.mdm_syn.motion import BVH
 from src.mdm_syn.motion.transforms import repr6d2quat
@@ -113,7 +113,9 @@ def main(args=None):
         iterator = iter(data)
         _, model_kwargs = next(iterator)
     else:
-        collate_args = [{'inp': torch.zeros(n_frames), 'tokens': None, 'lengths': n_frames}] * args.num_samples
+        collate_args = [{'inp': torch.zeros(n_frames), 
+                        'tokens': None, 
+                        'lengths': n_frames}] * args.num_samples
         _, model_kwargs = collate(collate_args)
 
     all_motions = []
@@ -184,8 +186,10 @@ def main(args=None):
             xyz_samples[i] = anim_pos(anim)  # n_frames x n_joints x 3  =>
         sample = xyz_samples.transpose(0, 2, 3, 1)  # n_samples x n_frames x n_joints x 3  =>  n_samples x n_joints x 3 x n_frames
 
-    rot2xyz_pose_rep = 'xyz' if model.data_rep in ['xyz', 'hml_vec', 'mixamo_vec', 'bvh_general_vec'] else model.data_rep
-    rot2xyz_mask = None if rot2xyz_pose_rep == 'xyz' else model_kwargs['y']['mask'].reshape(args.batch_size, n_frames).bool()
+    rot2xyz_pose_rep = 'xyz' if model.data_rep in ['xyz', 'hml_vec', 'mixamo_vec', 'bvh_general_vec'] \
+                            else model.data_rep
+    rot2xyz_mask = None if rot2xyz_pose_rep == 'xyz' \
+                        else model_kwargs['y']['mask'].reshape(args.batch_size, n_frames).bool()
     assert rot2xyz_pose_rep == 'xyz'
 
     if args.unconstrained:

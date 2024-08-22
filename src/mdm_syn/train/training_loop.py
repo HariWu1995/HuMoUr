@@ -14,7 +14,7 @@ from torch.optim import AdamW
 
 from src.utils import dist_util
 
-from src.mdm_syn.data_utils.humanml.networks.evaluator_wrapper import EvaluatorMDMWrapper
+from src.mdm_syn.data_loaders.humanml.networks.evaluator_wrapper import EvaluatorMDMWrapper
 
 from src.mdm_syn.diffusion import logger
 from src.mdm_syn.diffusion.fp16_util import MixedPrecisionTrainer

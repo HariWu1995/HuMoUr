@@ -20,13 +20,13 @@ from src.utils.seeding import fix_seed
 from src.mdm_syn.utils.parser_util import edit_args
 from src.mdm_syn.utils.model_util import create_model_and_diffusion, load_model
 
-import src.mdm_syn.data_utils.humanml.utils.paramUtil as paramUtil
-from src.mdm_syn.data_utils.humanml import humanml_utils
-from src.mdm_syn.data_utils.humanml.scripts.motion_process import recover_from_ric
-from src.mdm_syn.data_utils.humanml.utils.plot_script import plot_3d_motion
-from src.mdm_syn.data_utils.mixamo import mixamo_utils
-from src.mdm_syn.data_utils.mixamo.motion import MotionData
-from src.mdm_syn.data_utils.data_util import load_sin_motion
+import src.mdm_syn.data_loaders.humanml.utils.paramUtil as paramUtil
+from src.mdm_syn.data_loaders.humanml import humanml_utils
+from src.mdm_syn.data_loaders.humanml.scripts.motion_process import recover_from_ric
+from src.mdm_syn.data_loaders.humanml.utils.plot_script import plot_3d_motion
+from src.mdm_syn.data_loaders.mixamo import mixamo_utils
+from src.mdm_syn.data_loaders.mixamo.motion import MotionData
+from src.mdm_syn.data_loaders.data_util import load_sin_motion
 
 from src.mdm_syn.motion import BVH
 from src.mdm_syn.motion.transforms import repr6d2quat

@@ -11,13 +11,13 @@ from tqdm import tqdm
 from src.utils import dist_util
 from src.utils.seeding import fix_seed
 
-from src.mdm_syn.data_utils.mixamo.motion import MotionData
-from src.mdm_syn.data_utils.mixamo.evaluations.patched_nn import patched_nn_main
-from src.mdm_syn.data_utils.mixamo.evaluations.perwindow_nn import perwindow_nn, coverage, avg_per_frame_dist
+from src.mdm_syn.data_loaders.tensors import collate
+from src.mdm_syn.data_loaders.mixamo.motion import MotionData
+from src.mdm_syn.data_loaders.mixamo.evaluations.patched_nn import patched_nn_main
+from src.mdm_syn.data_loaders.mixamo.evaluations.perwindow_nn import perwindow_nn, coverage, avg_per_frame_dist
 
 from src.mdm_syn.utils.parser_util import generate_args, evaluation_parser
 from src.mdm_syn.utils.model_util import create_model_and_diffusion, load_model
-from src.mdm_syn.data_utils.tensors import collate
 
 
 def mixamo_evaluate(args, model, diffusion):
