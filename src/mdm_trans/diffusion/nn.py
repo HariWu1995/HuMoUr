@@ -2,7 +2,6 @@
 """
 Various utilities for neural networks.
 """
-
 import math
 
 import torch as th
@@ -11,11 +10,13 @@ import torch.nn as nn
 
 # PyTorch 1.7 has SiLU, but we support PyTorch 1.5.
 class SiLU(nn.Module):
+
     def forward(self, x):
         return x * th.sigmoid(x)
 
 
 class GroupNorm32(nn.GroupNorm):
+
     def forward(self, x):
         return super().forward(x.float()).type(x.dtype)
 
@@ -102,6 +103,7 @@ def normalization(channels):
     Make a standard normalization layer.
 
     :param channels: number of input channels.
+
     :return: an nn.Module for normalization.
     """
     return GroupNorm32(32, channels)
@@ -115,12 +117,14 @@ def timestep_embedding(timesteps, dim, max_period=10000):
                       These may be fractional.
     :param dim: the dimension of the output.
     :param max_period: controls the minimum frequency of the embeddings.
+
     :return: an [N x dim] Tensor of positional embeddings.
     """
     half = dim // 2
     freqs = th.exp(
         -math.log(max_period) * th.arange(start=0, end=half, dtype=th.float32) / half
     ).to(device=timesteps.device)
+
     args = timesteps[:, None].float() * freqs[None]
     embedding = th.cat([th.cos(args), th.sin(args)], dim=-1)
     if dim % 2:
@@ -132,6 +136,7 @@ def checkpoint(func, inputs, params, flag):
     """
     Evaluate a function without caching intermediate activations, allowing for
     reduced memory at the expense of extra compute in the backward pass.
+
     :param func: the function to evaluate.
     :param inputs: the argument sequence to pass to `func`.
     :param params: a sequence of parameters `func` depends on but does not
@@ -146,6 +151,7 @@ def checkpoint(func, inputs, params, flag):
 
 
 class CheckpointFunction(th.autograd.Function):
+
     @staticmethod
     @th.cuda.amp.custom_fwd
     def forward(ctx, run_function, length, *args):
@@ -169,8 +175,8 @@ class CheckpointFunction(th.autograd.Function):
         with th.enable_grad():
             for i in input_indices:
                 if i < ctx.input_length:
-                    # Not sure why the OAI code does this little
-                    # dance. It might not be necessary.
+                    # Not sure why the OAI code does this little dance.
+                    # It might not be necessary.
                     args[i] = args[i].detach().requires_grad_()
                     args[i] = args[i].view_as(args[i])
             output_tensors = ctx.run_function(*args[:ctx.input_length])
@@ -185,8 +191,7 @@ class CheckpointFunction(th.autograd.Function):
 
         # Compute gradients on the filtered tensors.
         computed_grads = th.autograd.grad(
-            [o for (o, g) in out_and_grads],
-            [args[i] for i in input_indices],
+            [o for (o, g) in out_and_grads], [args[i] for i in input_indices],
             [g for (o, g) in out_and_grads]
         )
 

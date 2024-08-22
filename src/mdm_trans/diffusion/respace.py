@@ -37,27 +37,34 @@ def space_timesteps(num_timesteps, section_counts):
                 f"cannot create exactly {num_timesteps} steps with an integer stride"
             )
         section_counts = [int(x) for x in section_counts.split(",")]
+
     size_per = num_timesteps // len(section_counts)
-    extra = num_timesteps % len(section_counts)
+    extra    = num_timesteps  % len(section_counts)
     start_idx = 0
     all_steps = []
+
     for i, section_count in enumerate(section_counts):
         size = size_per + (1 if i < extra else 0)
         if size < section_count:
             raise ValueError(
                 f"cannot divide section of {size} steps into {section_count}"
             )
+
         if section_count <= 1:
             frac_stride = 1
         else:
             frac_stride = (size - 1) / (section_count - 1)
+
         cur_idx = 0.0
         taken_steps = []
+
         for _ in range(section_count):
             taken_steps.append(start_idx + round(cur_idx))
             cur_idx += frac_stride
+
         all_steps += taken_steps
         start_idx += size
+
     return set(all_steps)
 
 
@@ -69,20 +76,21 @@ class SpacedDiffusion(GaussianDiffusion):
                           original diffusion process to retain.
     :param kwargs: the kwargs to create the base diffusion process.
     """
-
     def __init__(self, use_timesteps, **kwargs):
         self.use_timesteps = set(use_timesteps)
         self.timestep_map = []
         self.original_num_steps = len(kwargs["betas"])
 
-        base_diffusion = GaussianDiffusion(**kwargs)  # pylint: disable=missing-kwoa
         last_alpha_cumprod = 1.0
         new_betas = []
+
+        base_diffusion = GaussianDiffusion(**kwargs)  # pylint: disable=missing-kwoa
         for i, alpha_cumprod in enumerate(base_diffusion.alphas_cumprod):
             if i in self.use_timesteps:
                 new_betas.append(1 - alpha_cumprod / last_alpha_cumprod)
                 last_alpha_cumprod = alpha_cumprod
                 self.timestep_map.append(i)
+
         kwargs["betas"] = np.array(new_betas)
         super().__init__(**kwargs)
 
@@ -115,6 +123,7 @@ class SpacedDiffusion(GaussianDiffusion):
 
 
 class _WrappedModel:
+    
     def __init__(self, model, timestep_map, rescale_timesteps, original_num_steps):
         self.model = model
         self.timestep_map = timestep_map

@@ -8,7 +8,7 @@
 
 ⬜ [MAS](https://github.com/roykapon/MAS)
 
-⬜ [MoMo](https://github.com/MonkeySeeDoCG/MoMo)
+✅ [MoMo](https://github.com/MonkeySeeDoCG/MoMo)
 
 ⬜ [CAMDM](https://github.com/AIGAnimation/CAMDM)
 

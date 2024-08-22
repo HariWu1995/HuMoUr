@@ -2,46 +2,49 @@
 Logger copied from OpenAI baselines to avoid extra RL-based dependencies:
 https://github.com/openai/baselines/blob/ea25b9e8b234e6ee1bca43083f8f3cf974143998/baselines/logger.py
 """
-
-import os
 import sys
 import shutil
+import os
 import os.path as osp
+
+import tempfile
+import warnings
 import json
 import time
 import datetime
-import tempfile
-import warnings
+
 from collections import defaultdict
 from contextlib import contextmanager
+
 
 DEBUG = 10
 INFO = 20
 WARN = 30
 ERROR = 40
-
 DISABLED = 50
 
 
 class KVWriter(object):
+
     def writekvs(self, kvs):
         raise NotImplementedError
 
 
 class SeqWriter(object):
+
     def writeseq(self, seq):
         raise NotImplementedError
 
 
 class HumanOutputFormat(KVWriter, SeqWriter):
+
     def __init__(self, filename_or_file):
         if isinstance(filename_or_file, str):
             self.file = open(filename_or_file, "wt")
             self.own_file = True
         else:
-            assert hasattr(filename_or_file, "read"), (
+            assert hasattr(filename_or_file, "read"), \
                 "expected file or str, got %s" % filename_or_file
-            )
             self.file = filename_or_file
             self.own_file = False
 
@@ -96,6 +99,7 @@ class HumanOutputFormat(KVWriter, SeqWriter):
 
 
 class JSONOutputFormat(KVWriter):
+
     def __init__(self, filename):
         self.file = open(filename, "wt")
 
@@ -111,6 +115,7 @@ class JSONOutputFormat(KVWriter):
 
 
 class CSVOutputFormat(KVWriter):
+
     def __init__(self, filename):
         self.file = open(filename, "w+t")
         self.keys = []
@@ -124,16 +129,19 @@ class CSVOutputFormat(KVWriter):
             self.keys.extend(extra_keys)
             self.file.seek(0)
             lines = self.file.readlines()
+
             self.file.seek(0)
             for (i, k) in enumerate(self.keys):
                 if i > 0:
                     self.file.write(",")
                 self.file.write(k)
+
             self.file.write("\n")
             for line in lines[1:]:
                 self.file.write(line[:-1])
                 self.file.write(self.sep * len(extra_keys))
                 self.file.write("\n")
+
         for (i, k) in enumerate(self.keys):
             if i > 0:
                 self.file.write(",")
@@ -151,13 +159,14 @@ class TensorBoardOutputFormat(KVWriter):
     """
     Dumps key/value pairs into TensorBoard's numeric format.
     """
-
     def __init__(self, dir):
         os.makedirs(dir, exist_ok=True)
         self.dir = dir
         self.step = 1
+
         prefix = "events"
         path = osp.join(osp.abspath(dir), prefix)
+
         import tensorflow as tf
         from tensorflow.python import pywrap_tensorflow
         from tensorflow.core.util import event_pb2
@@ -175,9 +184,7 @@ class TensorBoardOutputFormat(KVWriter):
 
         summary = self.tf.Summary(value=[summary_val(k, v) for k, v in kvs.items()])
         event = self.event_pb2.Event(wall_time=time.time(), summary=summary)
-        event.step = (
-            self.step
-        )  # is there any reason why you'd want to specify the step?
+        event.step = self.step
         self.writer.WriteEvent(event)
         self.writer.Flush()
         self.step += 1
@@ -207,7 +214,6 @@ def make_output_format(format, ev_dir, log_suffix=""):
 # ================================================================
 # API
 # ================================================================
-
 
 def logkv(key, val):
     """
@@ -306,7 +312,6 @@ def profile(n):
     @profile("my_func")
     def my_func(): code
     """
-
     def decorator_with_name(func):
         def func_wrapper(*args, **kwargs):
             with profile_kv(n):
@@ -321,7 +326,6 @@ def profile(n):
 # Backend
 # ================================================================
 
-
 def get_current():
     if Logger.CURRENT is None:
         _configure_default_logger()
@@ -330,8 +334,9 @@ def get_current():
 
 
 class Logger(object):
+
     DEFAULT = None  # A logger with no output files. (See right below class definition)
-    # So that you can still log to the terminal without setting up any output files
+                    # So that you can still log to the terminal without setting up any output files
     CURRENT = None  # Current logger being used by the free functions above
 
     def __init__(self, dir, output_formats, comm=None):
@@ -359,16 +364,18 @@ class Logger(object):
             d = mpi_weighted_mean(
                 self.comm,
                 {
-                    name: (val, self.name2cnt.get(name, 1))
+                        name: (val, self.name2cnt.get(name, 1))
                     for (name, val) in self.name2val.items()
                 },
             )
             if self.comm.rank != 0:
                 d["dummy"] = 1  # so we don't get a warning about empty dict
+
         out = d.copy()  # Return the dict for unit testing purposes
         for fmt in self.output_formats:
             if isinstance(fmt, KVWriter):
                 fmt.writekvs(d)
+
         self.name2val.clear()
         self.name2cnt.clear()
         return out
@@ -413,13 +420,16 @@ def mpi_weighted_mean(comm, local_name2valcount):
     """
     Copied from: https://github.com/openai/baselines/blob/ea25b9e8b234e6ee1bca43083f8f3cf974143998/baselines/common/mpi_util.py#L110
     Perform a weighted average over dicts that are each on a different node
+
     Input: local_name2valcount: dict mapping key -> (value, count)
+
     Returns: key -> mean
     """
     all_name2valcount = comm.gather(local_name2valcount)
     if comm.rank == 0:
         name2sum = defaultdict(float)
         name2count = defaultdict(float)
+
         for n2vc in all_name2valcount:
             for (name, (val, count)) in n2vc.items():
                 try:
@@ -427,9 +437,7 @@ def mpi_weighted_mean(comm, local_name2valcount):
                 except ValueError:
                     if comm.rank == 0:
                         warnings.warn(
-                            "WARNING: tried to compute mean on non-float {}={}".format(
-                                name, val
-                            )
+                            "WARNING: tried to compute mean on non-float {}={}".format(name, val)
                         )
                 else:
                     name2sum[name] += val * count
@@ -463,6 +471,7 @@ def configure(dir=None, format_strs=None, comm=None, log_suffix=""):
             format_strs = os.getenv("OPENAI_LOG_FORMAT", "stdout,log,csv").split(",")
         else:
             format_strs = os.getenv("OPENAI_LOG_FORMAT_MPI", "log").split(",")
+            
     format_strs = filter(None, format_strs)
     output_formats = [make_output_format(f, dir, log_suffix) for f in format_strs]
 
