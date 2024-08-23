@@ -55,12 +55,13 @@ def main():
     # If it doesn't, and you still want to sample more prompts, run this script with different seeds
     # (specify through the --seed flag)
     args.batch_size = args.num_samples  # Sampling a single batch from the testset, with exactly args.num_samples
-    data = get_dataset_loader(name=args.dataset,
-                              batch_size=args.batch_size,
-                              num_frames=max_frames,
-                              split='test',
-                              load_mode='train',
-                              size=args.num_samples)  # in train mode, you get both text and motion.
+    data = get_dataset_loader(name = args.dataset,
+                      dataset_path = args.data_dir,
+                        batch_size = args.batch_size,
+                        num_frames = max_frames,
+                              size = args.num_samples,
+                         load_mode = 'train',   # train mode to get text and motion.
+                             split = 'test',) 
     # data.fixed_length = n_frames
     total_num_samples = args.num_samples * args.num_repetitions
 
