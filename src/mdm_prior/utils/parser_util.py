@@ -21,7 +21,7 @@ def parse_and_load_from_model(parser, **kwargs):
     add_data_options(parser)
     add_model_options(parser)
     add_diffusion_options(parser)
-    
+
     args = parser.parse_args()
     return load_from_model(args, parser, **kwargs)
 
@@ -342,7 +342,7 @@ def print_args(args):
     not isinstance(args, str):
         tmp = dict()
         for a in args:
-            tmp.update(vars(args))
+            tmp.update(vars(a))
         args = tmp
     else:
         args = vars(args)
