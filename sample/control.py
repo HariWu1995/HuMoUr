@@ -62,7 +62,6 @@ def main():
                               size = args.num_samples,
                          load_mode = 'train',   # train mode to get text and motion.
                              split = 'test',)
-    print('\n'*7, len(data), '\n'*7)
     # data.fixed_length = n_frames
     total_num_samples = args.num_samples * args.num_repetitions
 
