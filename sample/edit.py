@@ -56,7 +56,6 @@ def main():
                         num_frames = max_frames,
                              split = 'test',
                           hml_mode = 'train')  # in train mode, you get both text and motion.
-    print('\n'*7, len(data), '\n'*7)
     # data.fixed_length = n_frames
     total_num_samples = args.num_samples * args.num_repetitions
 

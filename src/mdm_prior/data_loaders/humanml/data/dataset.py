@@ -244,7 +244,7 @@ class Text2MotionDatasetV2(data.Dataset):
 
         self.num_frames = num_frames if num_frames else False
         self.max_motion_length = opt.max_motion_length
-        if (self.num_frames == False) or type(self.num_frames)==int:
+        if (self.num_frames == False) or type(self.num_frames) == int:
             min_motion_len = 40 if self.opt.dataset_name =='t2m' else 24
         else:
             min_motion_len = self.num_frames[0]
@@ -255,7 +255,7 @@ class Text2MotionDatasetV2(data.Dataset):
         with cs.open(split_file, 'r') as f:
             for line in f.readlines():
                 id_list.append(line.strip())
-        id_list = id_list[:size]
+        # id_list = id_list[:size]
 
         new_name_list = []
         length_list = []
@@ -291,6 +291,7 @@ class Text2MotionDatasetV2(data.Dataset):
                                 new_name = random.choice('ABCDEFGHIJKLMNOPQRSTUVW') + '_' + name
                                 while new_name in data_dict:
                                     new_name = random.choice('ABCDEFGHIJKLMNOPQRSTUVW') + '_' + name
+                                
                                 if self.num_frames != False:
                                     if len(n_motion) >= self.max_motion_length:
                                         bias = random.randint(0, len(n_motion) - self.max_motion_length)
@@ -308,10 +309,13 @@ class Text2MotionDatasetV2(data.Dataset):
                                 else:
                                     data_dict[new_name] = {'motion': n_motion,
                                                            'length': len(n_motion),
-                                                           'text':[text_dict]}
+                                                           'text': [text_dict]}
                                     length_list.append(len(n_motion))
 
                                 new_name_list.append(new_name)
+                                if len(new_name_list) >= size:
+                                    break
+
                             except:
                                 print(line_split)
                                 print(line_split[2], line_split[3], f_tag, to_tag, name)
@@ -773,7 +777,7 @@ class Text2MotionDatasetBaseline(data.Dataset):
                                     new_name = random.choice('ABCDEFGHIJKLMNOPQRSTUVW') + '_' + name
                                 data_dict[new_name] = {'motion': n_motion,
                                                        'length': len(n_motion),
-                                                       'text':[text_dict]}
+                                                       'text': [text_dict]}
                                 new_name_list.append(new_name)
                                 length_list.append(len(n_motion))
 
@@ -1007,8 +1011,10 @@ class RawTextDataset(data.Dataset):
         with cs.open(text_file) as f:
             for line in f.readlines():
                 word_list, pos_list = self.process_text(line.strip())
-                tokens = ['%s/%s'%(word_list[i], pos_list[i]) for i in range(len(word_list))]
-                self.data_dict.append({'caption':line.strip(), "tokens":tokens})
+                tokens = ['%s/%s' % (word_list[i], pos_list[i]) 
+                    for i in range(len(word_list))]
+                self.data_dict.append({'caption': line.strip(), 
+                                        "tokens": tokens})
 
         self.w_vectorizer = w_vectorizer
         print("Total number of descriptions {}".format(len(self.data_dict)))
@@ -1111,7 +1117,7 @@ class TextOnlyDataset(data.Dataset):
                                 new_name = random.choice('ABCDEFGHIJKLMNOPQRSTUVW') + '_' + name
                                 while new_name in data_dict:
                                     new_name = random.choice('ABCDEFGHIJKLMNOPQRSTUVW') + '_' + name
-                                data_dict[new_name] = {'text':[text_dict]}
+                                data_dict[new_name] = {'text': [text_dict]}
                                 new_name_list.append(new_name)
 
                             except:

@@ -40,18 +40,21 @@ def get_opt(opt_path, device=None, data_root=None):
             
     print('Reading', opt_path)
     with open(opt_path) as f:
+        
         for line in f:
-            if line.strip() not in skip:
-                # print(line.strip())
-                key, value = line.strip().split(': ')
-                if value in ('True', 'False'):
-                    opt_dict[key] = bool(value)
-                elif is_float(value):
-                    opt_dict[key] = float(value)
-                elif is_number(value):
-                    opt_dict[key] = int(value)
-                else:
-                    opt_dict[key] = str(value)
+            if line.strip() in skip:
+                continue
+
+            # print(line.strip())
+            key, value = line.strip().split(': ')
+            if value in ('True', 'False'):
+                opt_dict[key] = bool(value)
+            elif is_float(value):
+                opt_dict[key] = float(value)
+            elif is_number(value):
+                opt_dict[key] = int(value)
+            else:
+                opt_dict[key] = str(value)
 
     # print(opt)
     opt_dict['which_epoch'] = 'latest'
