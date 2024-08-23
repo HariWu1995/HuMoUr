@@ -20,11 +20,11 @@ from src.mdm_prior.utils.parser_util import edit_inpainting_args
 from src.mdm_prior.model.model_blending import ModelBlender
 from src.mdm_prior.model.cfg_sampler import wrap_model
 
-import src.mdm_prior.data_loaders.humanml.utils.paramUtil as paramUtil
 from src.mdm_prior.data_loaders.get_data import get_dataset_loader
 from src.mdm_prior.data_loaders.humanml_utils import get_inpainting_mask
 from src.mdm_prior.data_loaders.humanml.utils.plot_script import plot_3d_motion
 from src.mdm_prior.data_loaders.humanml.scripts.motion_process import recover_from_ric
+import src.mdm_prior.data_loaders.humanml.utils.paramUtil as paramUtil
 
 
 def main():
@@ -65,7 +65,7 @@ def main():
     total_num_samples = args.num_samples * args.num_repetitions
 
     print("Creating model and diffusion...")
-    DiffusionClass = InpaintingGaussianDiffusion if args_list[0].filter_noise else SpacedDiffusion
+    DiffusionClass = GaussianDiffusionInpainting if args_list[0].filter_noise else SpacedDiffusion
     model, diffusion = load_model_blending_and_diffusion(args_list, data, dist_util.dev(), DiffusionClass=DiffusionClass)
 
     iterator = iter(data)
@@ -118,10 +118,9 @@ def main():
 
         print(f"created {len(all_motions) * args.batch_size} samples")
 
-    all_motions = np.concatenate(all_motions, axis=0)
-    all_motions = all_motions[:total_num_samples]  # [bs, njoints, 6, seqlen]
-    all_text = all_text[:total_num_samples]
     all_lengths = np.concatenate(all_lengths, axis=0)[:total_num_samples]
+    all_motions = np.concatenate(all_motions, axis=0)[:total_num_samples]  # [bs, njoints, 6, seqlen]
+    all_text = all_text[:total_num_samples]
 
     if os.path.exists(out_path):
         shutil.rmtree(out_path)
