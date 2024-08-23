@@ -1,9 +1,15 @@
 import os
 import json
+
 from copy import deepcopy
 
 from argparse import ArgumentParser
 import argparse
+
+try:
+    from collections import Sequence
+except Exception:
+    from collections.abc import Sequence
 
 
 VERBOSE = os.environ.get('ARGUMENT_VERBOSE', True)
@@ -330,7 +336,15 @@ def add_frame_sampler_options(parser):
 
 
 def print_args(args):
-    args = vars(args)
+    
+    if isinstance(args, Sequence) and \
+    not isinstance(args, str):
+        tmp = dict()
+        for a in args:
+            tmp.update(vars(args))
+        args = tmp
+    else:
+        args = vars(args)
 
     print('\n\n\n', '*' * 19)
     print('Arguments:\n', json.dumps(args, indent=4))
