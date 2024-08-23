@@ -67,7 +67,8 @@ def main():
     print("Creating model and diffusion...")
     DiffusionClass = GaussianDiffusionInpainting if args_list[0].filter_noise else \
                        SpacedDiffusion
-    model, diffusion = load_model_blending_and_diffusion(args_list, data, dist_util.dev(), DiffusionClass=DiffusionClass)
+    model, diffusion = load_model_blending_and_diffusion(args_list, data, dist_util.dev(), 
+                                                         DiffusionClass=DiffusionClass)
 
     iterator = iter(data)
     input_motions, model_kwargs = next(iterator)
