@@ -313,8 +313,9 @@ class Text2MotionDatasetV2(data.Dataset):
                                     length_list.append(len(n_motion))
 
                                 new_name_list.append(new_name)
-                                if len(new_name_list) >= size:
-                                    break
+                                if size is not None:
+                                    if len(new_name_list) >= size:
+                                        break
 
                             except:
                                 print(line_split)
@@ -1087,7 +1088,7 @@ class TextOnlyDataset(data.Dataset):
         with cs.open(split_file, 'r') as f:
             for line in f.readlines():
                 id_list.append(line.strip())
-        id_list = id_list[:size]
+        # id_list = id_list[:size]
 
         new_name_list = []
         length_list = []
@@ -1119,6 +1120,9 @@ class TextOnlyDataset(data.Dataset):
                                     new_name = random.choice('ABCDEFGHIJKLMNOPQRSTUVW') + '_' + name
                                 data_dict[new_name] = {'text': [text_dict]}
                                 new_name_list.append(new_name)
+                                if size is not None:
+                                    if len(new_name_list) >= size:
+                                        break
 
                             except:
                                 print(line_split)
