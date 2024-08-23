@@ -21,6 +21,7 @@ def parse_and_load_from_model(parser, **kwargs):
     add_data_options(parser)
     add_model_options(parser)
     add_diffusion_options(parser)
+    
     args = parser.parse_args()
     return load_from_model(args, parser, **kwargs)
 
@@ -336,7 +337,7 @@ def add_frame_sampler_options(parser):
 
 
 def print_args(args):
-    
+
     if isinstance(args, Sequence) and \
     not isinstance(args, str):
         tmp = dict()
