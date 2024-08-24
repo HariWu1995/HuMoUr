@@ -26,16 +26,6 @@ def parse_and_load_from_model(parser, **kwargs):
     return load_from_model(args, parser, **kwargs)
 
 
-def get_model_path_from_args():
-    try:
-        dummy_parser = ArgumentParser()
-        dummy_parser.add_argument('model_path')
-        dummy_args, _ = dummy_parser.parse_known_args()
-        return dummy_args.model_path
-    except:
-        raise ValueError('model_path argument must be specified.')
-
-
 def load_from_model(args, parser, task=''):
     args_to_overwrite = []
 
