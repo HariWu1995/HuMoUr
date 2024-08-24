@@ -221,9 +221,9 @@ def add_generate_options(parser):
 
 def add_edit_options(parser):
     group = parser.add_argument_group('edit')
-    group.add_argument("--edit_mode", default='in_betweening', choices=['in_betweening', 'expansion', 'upper_body',  'lower_body', 'harmonization'], type=str,
+    group.add_argument("--edit_mode", default='in_between', choices=['in_between', 'expansion', 'upper_body',  'lower_body', 'harmonization'], type=str,
                        help="Defines which parts of the input motion will be edited.\n"
-                            "(1) in_betweening - suffix and prefix motion taken from input motion, "
+                            "(1) in_between - suffix and prefix motion taken from input motion, "
                             "middle motion is generated.\n"
                             "(2) expansion - prefix and suffix are generated,"
                             "middle motion is taken from input motion.\n"
@@ -234,9 +234,9 @@ def add_edit_options(parser):
                             "(5) harmonization - low frequencies are taken from the reference motion,"
                             "high frequencies are generated")
     group.add_argument("--prefix_end", default=0.25, type=float,
-                       help="For in_betweening editing - Defines the end of input prefix (ratio from all frames).")
+                       help="For in_between editing - Defines the end of input prefix (ratio from all frames).")
     group.add_argument("--suffix_start", default=0.75, type=float,
-                       help="For in_betweening editing - Defines the start of input suffix (ratio from all frames).")
+                       help="For in_between editing - Defines the start of input suffix (ratio from all frames).")
     group.add_argument("--prefix_length", default=0.15, type=float,
                        help="For motion expansion - Defines the length of generated prefix (ratio from all frames of input).")
     group.add_argument("--suffix_length", default=0.15, type=float,

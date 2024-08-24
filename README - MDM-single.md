@@ -183,7 +183,7 @@ Please refer to file utils/parser_util.py for more arguments.
 ### In-betweening
 For in-betweening, the prefix and suffix of a motion are given as input and the model generates the rest according to the motion the network was trained on.
 ```shell
-python -m sample.edit --model_path <path_to_pretrained_model> --edit_mode in_betweening --num_samples 3
+python -m sample.edit --model_path <path_to_pretrained_model> --edit_mode in_between --num_samples 3
 ```
 * To specify the motion to be used for the prefix and suffix use `--ref_motion <path_to_reference_motion>`. If `--ref_motion` is not specified, the original motion the network was trained on will be used.
 * Use `--prefix_end` and `--suffix_start` to specify the length of the prefix and suffix

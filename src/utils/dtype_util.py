@@ -80,7 +80,7 @@ def convert_dataset_mdm_to_bvh(input_bvh, motion_path):
     from src.mdm_syn.motion.InverseKinematics import animation_from_positions
 
     # input_bvh = '<the bvh on which your network has been trained>'
-    # motion_path = '<the in_betweening output path>/results.npy'
+    # motion_path = '<the in_between output path>/results.npy'
 
     input_anim, names, _ = BVH.load(input_bvh)
     

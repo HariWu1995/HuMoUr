@@ -156,7 +156,7 @@ def main():
     
     gt_frames_per_sample = {}
     model_kwargs['y']['inpainted_motion'] = input_motions # => samples, joints, 1, frames
-    if args.edit_mode == 'in_betweening':
+    if args.edit_mode == 'in_between':
         model_kwargs['y']['inpainting_mask'] = torch.ones_like(input_motions, dtype=torch.float,
                                                                device=input_motions.device)  # True means use gt motion
         for i, length in enumerate(model_kwargs['y']['lengths'].cpu().numpy()):
