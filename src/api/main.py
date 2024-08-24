@@ -24,35 +24,27 @@ from fastapi.exceptions import HTTPException
 from fastapi.openapi.docs import get_swagger_ui_html
 from fastapi.middleware.cors import CORSMiddleware
 
-from api.io_util import load_config, load_multipart_file
-from api.templates import OutputAPI
-from api.conversion import image2base64
-from api.facegen_util import generate_image, STYLE_NAMES, STYLE_DEFAULT
-from api.faceswap_util import swap_face_only, DEVICE
-from api.profiler_util import get_gpu_memory, get_gpu_profile, get_cpu_info
+from src.api.templates import OutputAPI
 
-
-STYLE_NAMES = tuple(STYLE_NAMES)
-
-PROMPT_POSITIVE = ''
-PROMPT_NEGATIVE = '(lowres, low quality, worst quality:1.2), (text:1.2), watermark, painting, drawing, illustration, glitch, deformed, mutated, cross-eyed, ugly, disfigured (lowres, low quality, worst quality:1.2), (text:1.2), watermark, painting, drawing, illustration, glitch,deformed, mutated, cross-eyed, ugly, disfigured'
+from src.utils.io_util import load_config, load_multipart_file
+from src.utils.dtype_util import image2base64
+from src.utils.profiler_util import get_gpu_memory, get_gpu_profile, get_cpu_info
 
 
 # Model Config
+MODEL_DIR = os.environ.get('MODEL_DIR', './')
 MODEL_CONFIG = dict(
-        offload_to_cpu = False,
-        cuda_device_id = -1,
-    face_segmentor_dir = './checkpoints',
-    face_analyzer_dir = './',
-    face_adapter_dir = './checkpoints',
-    sdxl_ckpt_path = "wangqixun/YamerMIX_v8",
-    lora_ckpt_path = "latent-consistency/lcm-lora-sdxl",
-    #sam_ckpt_path = "./checkpoints/sam2_hiera_small.pt",
+    # GPU Settings
+    offload_to_cpu = False,
+    cuda_device_id = -1,
+
+    # Model checkpoints
+    f"{CHECKPOINT_DIR}/t2m/{model}/model{model_ep:09}.pt"
 )
 
 
 # API
-API_CONFIG = load_config(path='./api/config.yaml')
+API_CONFIG = load_config(path='./src/api/config.yaml')
 API_RESPONDER = OutputAPI()
 
 app = FastAPI(
@@ -90,8 +82,8 @@ async def redirect():
     return RedirectResponse("/docs")
 
 
-@app.post("/config")
-async def config(
+@app.post("/models/config")
+async def models_config(
     face_segmentor_dir :  str = Form(description=API_CONFIG['PARAMETERS']['face_segmentor_dir'], default=MODEL_CONFIG['face_segmentor_dir']), 
      face_analyzer_dir :  str = Form(description=API_CONFIG['PARAMETERS']['face_analyzer_dir'], default=MODEL_CONFIG['face_analyzer_dir']), 
       face_adapter_dir :  str = Form(description=API_CONFIG['PARAMETERS']['face_adapter_dir'], default=MODEL_CONFIG['face_adapter_dir']), 
@@ -117,85 +109,6 @@ async def config(
         response = API_RESPONDER.result(is_successful=False, err_log=traceback.format_exc())
     
     return response
-
-
-@app.post("/clear")
-async def clear():
-    try:
-        gpu_mem_old = get_gpu_profile()
-        
-        gc.collect()
-        if str(DEVICE).__contains__("cuda"):
-            torch.cuda.empty_cache()
-        
-        gpu_mem_new = get_gpu_profile()
-        response = API_RESPONDER.result(is_successful=True, data={'GPU usage before': gpu_mem_old,
-                                                                  'GPU usage after': gpu_mem_new, })
-    except Exception as e:
-        response = API_RESPONDER.result(is_successful=False, err_log=traceback.format_exc())
-    
-    return response
-
-
-@app.post("/profile")
-async def profile():
-    try:
-        gpu_mem = get_gpu_profile()
-        sys_profile = get_cpu_info()
-        sys_profile.update({ 'GPU usage': gpu_mem, })
-
-        response = API_RESPONDER.result(is_successful=True, data=sys_profile)
-    except Exception as e:
-        response = API_RESPONDER.result(is_successful=False, err_log=traceback.format_exc())
-    
-    return response
-
-
-@app.post("/upload")
-async def upload(
-        images: List[UploadFile] = \
-                        File(description=API_CONFIG['PARAMETERS']['face_image'], media_type='multipart/form-data'),
-        return_type: Literal['first','last','zip'] = \
-                        Form(description="Return 1st or last input, or zipped folder of all inputs", default='zip')
-    ):
-    """
-    Test:
-        multiple_files = [
-        ('images', ('foo.png', open('foo.png', 'rb'), 'image/png')),
-        ('images', ('bar.png', open('bar.png', 'rb'), 'image/png'))]
-        r = requests.post(url, files=multiple_files)
-    """
-    _images = []
-    for img in images:
-        img = await img.read()
-        img = Image.open(BytesIO(img)).convert('RGB')
-        _images.append(img)
-
-    if return_type != 'zip':
-
-        if return_type == 'first':
-            img = _images[0]
-        else:
-            img = _images[-1]
-
-        image_in_bytes = BytesIO()
-        img.save(image_in_bytes, format='PNG')
-        image_in_bytes = image_in_bytes.getvalue()
-        return Response(content=image_in_bytes, media_type="image/png")
-
-    else:
-        buffer = BytesIO()
-        with ZipFile(buffer, mode='w', compression=ZIP_DEFLATED) as temp:
-            for file in images:
-                fcontent = await file.read()
-                fname = ZipInfo(file.filename)
-                temp.writestr(fname, fcontent)
-
-        return StreamingResponse(
-            iter([buffer.getvalue()]), 
-            media_type="application/x-zip-compressed", 
-            headers={ "Content-Disposition": "attachment; filename=images.zip"}
-        )
 
 
 @app.post("/generate")
@@ -361,6 +274,65 @@ async def faceswap(
         response = API_RESPONDER.result(is_successful=False, err_log=traceback.format_exc())
 
     return response
+
+
+@app.post("/clear")
+async def clear():
+    try:
+        gpu_mem_old = get_gpu_profile()
+        
+        gc.collect()
+        if str(DEVICE).__contains__("cuda"):
+            torch.cuda.empty_cache()
+        
+        gpu_mem_new = get_gpu_profile()
+        response = API_RESPONDER.result(is_successful=True, data={'GPU usage before': gpu_mem_old,
+                                                                  'GPU usage after': gpu_mem_new, })
+    except Exception as e:
+        response = API_RESPONDER.result(is_successful=False, err_log=traceback.format_exc())
+    
+    return response
+
+
+@app.post("/profile")
+async def profile():
+    try:
+        gpu_mem = get_gpu_profile()
+        sys_profile = get_cpu_info()
+        sys_profile.update({ 'GPU usage': gpu_mem, })
+
+        response = API_RESPONDER.result(is_successful=True, data=sys_profile)
+    except Exception as e:
+        response = API_RESPONDER.result(is_successful=False, err_log=traceback.format_exc())
+    
+    return response
+
+
+@app.post("/upload")
+async def upload(
+        files: List[UploadFile] = File(description="Files to upload", 
+                                        media_type='multipart/form-data'),
+    ):
+    """
+    Test:
+        multiple_files = [
+            ('files', ('foo.fbx', open('foo.fbx', 'rb'))),
+            ('files', ('bar.bvh', open('bar.bvh', 'rb'))),
+        ]
+        r = requests.post(url, files=multiple_files)
+    """
+    buffer = BytesIO()
+    with ZipFile(buffer, mode='w', compression=ZIP_DEFLATED) as temp:
+        for file in images:
+            fcontent = await file.read()
+            fname = ZipInfo(file.filename)
+            temp.writestr(fname, fcontent)
+
+    return StreamingResponse(
+        iter([buffer.getvalue()]), 
+        media_type="application/x-zip-compressed", 
+        headers={ "Content-Disposition": "attachment; filename=files.zip"}
+    )
 
 
 if __name__ == "__main__":

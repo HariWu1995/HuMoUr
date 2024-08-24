@@ -53,7 +53,7 @@ def load_from_model(args, parser, task=''):
     
     # load args from model
     args_path = os.path.join(os.path.dirname(args.model_path), 'args.json')
-    assert os.path.exists(args_path), 'Arguments json file was not found!'
+    assert os.path.exists(args_path), f'JSON file was not found @ {args_path}'
     with open(args_path, 'r') as fr:
         model_args = json.load(fr)
 

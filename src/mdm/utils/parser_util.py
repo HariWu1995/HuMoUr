@@ -21,13 +21,9 @@ def parse_and_load_from_model(parser):
         args_to_overwrite += get_args_per_group_name(parser, args, group_name)
 
     # load args from model
-    if (args.model_config_path is not None) \
-    and (args.model_config_path != ''):
-        args_path = args.model_config_path
-    else:
-        model_path = get_model_path_from_args()
-        args_path = os.path.join(os.path.dirname(model_path), 'args.json')
-    assert os.path.exists(args_path), 'Arguments json file was not found!'
+    model_path = get_model_path_from_args()
+    args_path = os.path.join(os.path.dirname(model_path), 'args.json')
+    assert os.path.exists(args_path), f'JSON file was not found @ {args_path}'
     with open(args_path, 'r') as fr:
         model_args = json.load(fr)
 
@@ -253,6 +249,7 @@ def generate_args(verbose: bool = VERBOSE):
     add_base_options(parser)
     add_sampling_options(parser)
     add_generate_options(parser)
+
     args = parse_and_load_from_model(parser)
     cond_mode = get_cond_mode(args)
 
@@ -273,8 +270,8 @@ def edit_args(verbose: bool = VERBOSE):
     add_base_options(parser)
     add_sampling_options(parser)
     add_edit_options(parser)
+    
     args = parse_and_load_from_model(parser)
-
     if verbose:
         print_args(args)
     return args
@@ -286,8 +283,8 @@ def evaluation_parser(verbose: bool = VERBOSE):
     # args specified by the user: (all other will be loaded from the model)
     add_base_options(parser)
     add_evaluation_options(parser)
-    args = parse_and_load_from_model(parser)
 
+    args = parse_and_load_from_model(parser)
     if verbose:
         print_args(args)
     return args
