@@ -21,7 +21,8 @@ def parse_and_load_from_model(parser):
         args_to_overwrite += get_args_per_group_name(parser, args, group_name)
 
     # load args from model
-    model_path = get_model_path_from_args()
+    # model_path = get_model_path_from_args()
+    model_path = args.model_path
     args_path = os.path.join(os.path.dirname(model_path), 'args.json')
     assert os.path.exists(args_path), f'JSON file was not found @ {args_path}'
     with open(args_path, 'r') as fr:
