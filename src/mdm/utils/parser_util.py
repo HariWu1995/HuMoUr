@@ -55,16 +55,6 @@ def get_args_per_group_name(parser, args, group_name):
     return ValueError('group_name was not found.')
 
 
-def get_model_path_from_args():
-    try:
-        dummy_parser = ArgumentParser()
-        dummy_parser.add_argument('model_path')
-        dummy_args, _ = dummy_parser.parse_known_args()
-        return dummy_args.model_path
-    except:
-        raise ValueError('model_path argument must be specified.')
-
-
 def add_base_options(parser):
     group = parser.add_argument_group('base')
     group.add_argument("--cuda", default=True, type=bool, help="Use cuda device, otherwise use CPU.")
