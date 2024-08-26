@@ -27,10 +27,10 @@ class Dataset(torch.utils.data.Dataset):
         self.min_len = min_len
         self.num_seq_max = num_seq_max
 
-        self.only_60_classes = kwargs.get('only_60_classes', False)
-        self.use_only_15_classes = kwargs.get('use_only_15_classes', False)
-        self.leave_out_15_classes = kwargs.get('leave_out_15_classes', False)
-        self.align_pose_frontview = kwargs.get('align_pose_frontview', False)
+        self.only_60_classes               = kwargs.get(     'only_60_classes', False)
+        self.use_only_15_classes           = kwargs.get( 'use_only_15_classes', False)
+        self.leave_out_15_classes          = kwargs.get('leave_out_15_classes', False)
+        self.align_pose_frontview          = kwargs.get('align_pose_frontview', False)
         self.use_action_cat_as_text_labels = kwargs.get('use_action_cat_as_text_labels', False)
 
         if self.split not in ["train", "val", "test"]:
@@ -118,9 +118,10 @@ class Dataset(torch.utils.data.Dataset):
 
                 if self.align_pose_frontview:
                     first_frame_root_pose_matrix = geometry.axis_angle_to_matrix(pose[0][0])
-                    all_root_poses_matrix = geometry.axis_angle_to_matrix(pose[:, 0, :])
-                    aligned_root_poses_matrix = torch.matmul(torch.transpose(first_frame_root_pose_matrix, 0, 1),
-                                                             all_root_poses_matrix)
+                    all_root_poses_matrix        = geometry.axis_angle_to_matrix(pose[:, 0, :])
+                    aligned_root_poses_matrix = torch.matmul(
+                                                    torch.transpose(first_frame_root_pose_matrix, 0, 1),
+                                                    all_root_poses_matrix)
                     pose[:, 0, :] = geometry.matrix_to_axis_angle(aligned_root_poses_matrix)
 
                     if self.translation:
@@ -201,7 +202,8 @@ class Dataset(torch.utils.data.Dataset):
 
         output = {'inp': inp, 'action': action}
         if hasattr(self, '_actions') and hasattr(self, '_action_classes'):
-            output['action_text'] = self.action_to_action_name(self.get_action(data_index))
+            output['action_text'] = self.action_to_action_name(
+                                        self.get_action(data_index))
         return output
 
     def get_mean_length_label(self, label):

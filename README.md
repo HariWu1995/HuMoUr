@@ -12,6 +12,8 @@
 
 ⬜ [CAMDM](https://github.com/AIGAnimation/CAMDM)
 
+⬜ [HOID](https://github.com/neu-vi/HOI-Diff)
+
 
 ## Getting started
 
