@@ -12,9 +12,13 @@
 
 ⬜ [CAMDM](https://github.com/AIGAnimation/CAMDM)
 
+--------------------------
+
 ⬜ [THOI](https://github.com/JunukCha/Text2HOI)
 
 ⬜ [HOID](https://github.com/neu-vi/HOI-Diff)
+
+⬜ [THOR](https://arxiv.org/pdf/2403.11208)
 
 
 ## Getting started
