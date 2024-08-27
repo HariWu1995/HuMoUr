@@ -1,6 +1,6 @@
 # [HuMoUr](https://github.com/HariWu1995/HuMoUr): Human-Motion Wrapper for the below repos
 --------------------------
-## Human Motion Only
+### Human Motion Only
 
 ✅ [MDM](https://github.com/GuyTevet/motion-diffusion-model)
 
@@ -15,7 +15,7 @@
 ⬜ [CAMDM](https://github.com/AIGAnimation/CAMDM)
 
 --------------------------
-## Human-Object Interaction
+### Human-Object Interaction
 
 ⬜ [THOI](https://github.com/JunukCha/Text2HOI)
 
