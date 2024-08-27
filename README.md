@@ -12,6 +12,8 @@
 
 ⬜ [CAMDM](https://github.com/AIGAnimation/CAMDM)
 
+⬜ [THOI](https://github.com/JunukCha/Text2HOI)
+
 ⬜ [HOID](https://github.com/neu-vi/HOI-Diff)
 
 
