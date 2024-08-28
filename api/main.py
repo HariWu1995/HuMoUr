@@ -31,25 +31,57 @@ from src.utils.dtype_util import image2base64
 from src.utils.profiler_util import get_gpu_memory, get_gpu_profile, get_cpu_info
 
 
-# Model Config
-MODEL_DIR = os.environ.get('MODEL_DIR', './')
+#############################
+#       Model Config        #
+#############################
+
 MODEL_CONFIG = dict(
+
     # GPU Settings
-    offload_to_cpu = False,
-    cuda_device_id = -1,
+    cpu_offload = False,
+    cuda_device = -1,
+
+    # Checkpoints Directory
+    MODEL_DIR = os.environ.get('MODEL_DIR', './'),
 
     # Model checkpoints - Human
-    humodel_a2m = f"{MODEL_DIR}/a2m/{model}/model{model_ep:09}.pt",
-    humodel_t2m = f"{MODEL_DIR}/t2m/{model}/model{model_ep:09}.pt",
-    humodel_t2mm = f"{MODEL_DIR}/lm/{model}/model{model_ep:09}.pt",
-    humodel_t2cm = f"{MODEL_DIR}/cm/{model}/model{model_ep:09}.pt",
+    humodel_mtf_path = "{MODEL_DIR}/mtf/{model}/model{model_ep:09}.pt",
+    humodel_m2m_path = "{MODEL_DIR}/m2m/{model}/model{model_ep:09}.pt",
+    humodel_a2m_path = "{MODEL_DIR}/a2m/{model}/model{model_ep:09}.pt",
+    humodel_t2m_path = "{MODEL_DIR}/t2m/{model}/model{model_ep:09}.pt",
+    humodel_t2mm_path = "{MODEL_DIR}/lm/{model}/model{model_ep:09}.pt",
+    humodel_t2cm_path = "{MODEL_DIR}/cm/{model}/model{model_ep:09}.pt",
+    humodel_ctrl_path = "{MODEL_DIR}/mc/{model}/model{model_ep:09}.pt",
+
+    humodel_mtf_opt = { 'momo': 500_000},
+    humodel_a2m_opt = { 'humanact12': 350_000, 'humanact12_no_fc':   750_000,
+                             'uestc': 950_000,      'uestc_no_fc': 1_550_000, },
+    humodel_t2m_opt = {    'humanml_trans_dec_512': 375_000,
+                           'humanml_trans_enc_512': 475_000, },
+    humodel_t2mm_opt = {'my_humanml_trans_enc_512': 200_000,  
+                          'Babel_TrasnEmb_GeoLoss': 850_000, },
+    humodel_t2cm_opt = {'pw3d_prefix' : 240_000, 
+                        'pw3d_text'   : 100_000, },
+    humodel_ctrl_opt = {'left_wrist'  : 280_000,
+                        'right_foot'  : 280_000,
+                        'root_horizon': 280_000, },
+    humodel_m2m_opt = { 'mixamo/0000_Breakdance_Freezes'    : 60_000,
+                        'mixamo/0001_Capoeira'              : 60_000,
+                        'mixamo/0002_Chicken_Dance'         : 60_000,
+                        'mixamo/0003_Dancing'               : 60_000,
+                        'mixamo/0004_House_Dancing'         : 60_000,
+                        'mixamo/0005_Punch_To_Elbow_Combo'  : 60_000,
+                        'mixamo/0006_Salsa_Dancing'         : 60_000,
+                        'mixamo/0007_Swing_Dancing'         : 60_000,
+                        'mixamo/0008_Warming_Up'            : 60_000,
+                        'mixamo/0009_Wave_Hip_Hop_Dance'    : 60_000, },
+
+    # TODO: Model checkpoints - Human-Object Interaction
 
     # Model checkpoints - Animal
-    animodel_m2m = {
-                     'jaguar': ,
-                      'horse': ,
-                    'ostrich': ,
-                   },
+    animodel_m2m_path = "{MODEL_DIR}/m2m/animals/{model}/model{model_ep:09}.pt",
+    animodel_m2m_opt = {  'horse':  39_999,  'jaguar': 130_000,
+                        'ostrich': 140_000, 'weavern': None, },
 )
 
 
@@ -101,25 +133,16 @@ async def redirect():
 
 @app.post("/models/config")
 async def models_config(
-    face_segmentor_dir :  str = Form(description=API_CONFIG['PARAMETERS']['face_segmentor_dir'], default=MODEL_CONFIG['face_segmentor_dir']), 
-     face_analyzer_dir :  str = Form(description=API_CONFIG['PARAMETERS']['face_analyzer_dir'], default=MODEL_CONFIG['face_analyzer_dir']), 
-      face_adapter_dir :  str = Form(description=API_CONFIG['PARAMETERS']['face_adapter_dir'], default=MODEL_CONFIG['face_adapter_dir']), 
-        sdxl_ckpt_path :  str = Form(description=API_CONFIG['PARAMETERS']['sdxl_ckpt_path'], default=MODEL_CONFIG['sdxl_ckpt_path']), 
-        lora_ckpt_path :  str = Form(description=API_CONFIG['PARAMETERS']['lora_ckpt_path'], default=MODEL_CONFIG['lora_ckpt_path']), 
-        cuda_device_id :  int = Form(description=API_CONFIG['PARAMETERS']['cuda_device_id'], default=MODEL_CONFIG['cuda_device_id']), 
-        offload_to_cpu : bool = Form(description=API_CONFIG['PARAMETERS']['offload_to_cpu'], default=MODEL_CONFIG['offload_to_cpu']), 
+          MODEL_DIR :  str = Form(description=API_CONFIG['PARAMETERS'][ 'MODEL_DIR' ], default=MODEL_CONFIG['MODEL_DIR']), 
+        cuda_device :  int = Form(description=API_CONFIG['PARAMETERS']['cuda_device'], default=MODEL_CONFIG['cuda_device']), 
+        cpu_offload : bool = Form(description=API_CONFIG['PARAMETERS']['cpu_offload'], default=MODEL_CONFIG['cpu_offload']), 
 ):
     try:
         global MODEL_CONFIG
         MODEL_CONFIG.update(dict(
-           face_segmentor_dir = face_segmentor_dir,
-            face_analyzer_dir = face_analyzer_dir,
-             face_adapter_dir = face_adapter_dir,
-               sdxl_ckpt_path = sdxl_ckpt_path,
-               lora_ckpt_path = lora_ckpt_path,
-
-               cuda_device_id = cuda_device_id,
-               offload_to_cpu = offload_to_cpu,
+                 MODEL_DIR = MODEL_DIR,
+               cuda_device = cuda_device,
+               cpu_offload = cpu_offload,
         ))
         response = API_RESPONDER.result(is_successful=True, data=MODEL_CONFIG)
 
@@ -131,71 +154,6 @@ async def models_config(
 
 @app.post("/generate")
 async def generate(
-         face_image: UploadFile = \
-                           File(description=API_CONFIG['PARAMETERS']['face_image'], media_type='multipart/form-data'),
-         style_name: Literal[STYLE_NAMES] = \
-                           Form(description=API_CONFIG['PARAMETERS']['style_name'], default=STYLE_DEFAULT),
-             prompt: str = Form(description=API_CONFIG['PARAMETERS']['prompt_positive'], default=PROMPT_POSITIVE), 
-    negative_prompt: str = Form(description=API_CONFIG['PARAMETERS']['prompt_negative'], default=PROMPT_NEGATIVE), 
-          num_steps: int = Form(description=API_CONFIG['PARAMETERS']['num_steps'], default=5), 
-     guidance_scale: int = Form(description=API_CONFIG['PARAMETERS']['guidance_scale'], default=0), 
-    generation_seed: int = Form(description=API_CONFIG['PARAMETERS']['generation_seed'], default=3_3_2023), 
-         enable_LCM: bool = Form(description=API_CONFIG['PARAMETERS']['enable_LCM'], default=True), 
-       enhance_face: bool = Form(description=API_CONFIG['PARAMETERS']['enhance_face'], default=True),
-    strength_ip_adapter: float = Form(description=API_CONFIG['PARAMETERS']['strength_ip_adapter'], default=0.8), 
-    strength_identitynet: float = Form(description=API_CONFIG['PARAMETERS']['strength_identitynet'], default=0.8), 
-):
-
-    try:        
-        # Preprocess
-        filename = face_image.filename
-        file_ext = os.path.splitext(filename)[1].lower()
-
-        if file_ext not in [".png", ".jpg", ".jpeg"]:
-            raise TypeError(f"{filename} with type")
-
-        face_image = await face_image.read()
-        face_image = Image.open(BytesIO(face_image)).convert('RGB')
-
-        # Run pipeline
-        generated_image = generate_image(
-                            face_image = face_image, 
-                            pose_image = None, 
-                                prompt = prompt, 
-                       negative_prompt = negative_prompt, 
-                            style_name = style_name, 
-                             num_steps = num_steps, 
-            identitynet_strength_ratio = strength_identitynet, 
-             ip_adapter_strength_ratio = strength_ip_adapter, 
-                        guidance_scale = guidance_scale, 
-                                  seed = generation_seed, 
-                            enable_LCM = enable_LCM, 
-                   enhance_face_region = enhance_face, 
-                          MODEL_CONFIG = MODEL_CONFIG,
-        )
-
-        # Response
-        print('\nResponding ...')
-        if isinstance(generated_image, np.ndarray):
-            image_in_bytes = generated_image.tobytes()
-        elif isinstance(generated_image, PIL.Image.Image):
-            image_in_bytes = BytesIO()
-            generated_image.save(image_in_bytes, format='PNG')
-            image_in_bytes = image_in_bytes.getvalue()
-        else:
-            raise TypeError(f"Type of output = {generated_image.__class__} is not supported!")
-
-        response = Response(content=image_in_bytes, media_type="image/png")
-        # response = API_RESPONDER.result(is_successful=True, data=results)
-
-    except Exception as e:
-        response = API_RESPONDER.result(is_successful=False, err_log=traceback.format_exc())
-
-    return response
-
-
-@app.post("/faceswap")
-async def faceswap(
           face_image: UploadFile = \
                             File(description=API_CONFIG['PARAMETERS']['face_image'], media_type='multipart/form-data'),
           pose_image: UploadFile = \
@@ -205,16 +163,6 @@ async def faceswap(
       mask_padding_H:   int = Form(description=API_CONFIG['PARAMETERS']['mask_padding_H'], default=11), 
       mask_threshold: float = Form(description=API_CONFIG['PARAMETERS']['mask_threshold'], default=0.33), 
              prompt: str = Form(description=API_CONFIG['PARAMETERS']['prompt_positive'], default=PROMPT_POSITIVE), 
-    negative_prompt: str = Form(description=API_CONFIG['PARAMETERS']['prompt_negative'], default=PROMPT_NEGATIVE), 
-      guidance_scale:  int = Form(description=API_CONFIG['PARAMETERS']['guidance_scale'], default=5), 
-           num_steps:  int = Form(description=API_CONFIG['PARAMETERS']['num_steps'], default=30), 
-     generation_seed:  int = Form(description=API_CONFIG['PARAMETERS']['generation_seed'], default=3_3_2023), 
-          enable_LCM: bool = Form(description=API_CONFIG['PARAMETERS']['enable_LCM'], default=False), 
-        enhance_face: bool = Form(description=API_CONFIG['PARAMETERS']['enhance_face'], default=False),
-    strength_ip_adapter: float = Form(description=API_CONFIG['PARAMETERS']['strength_ip_adapter'], default=0.11), 
-    strength_identitynet: float = Form(description=API_CONFIG['PARAMETERS']['strength_identitynet'], default=0.8), 
-      return_output_only: bool = Form(description=API_CONFIG['PARAMETERS']['return_output_only'], default=True), 
-        reface_mask_only: bool = Form(description=API_CONFIG['PARAMETERS']['reface_mask_only'], default=True), 
 ):
 
     try:        
@@ -232,25 +180,7 @@ async def faceswap(
         pose_image = Image.open(BytesIO(pose_image)).convert('RGB')
 
         # Run pipeline
-        generated_image = swap_face_only(
-                                face_image = face_image, 
-                                pose_image = pose_image, 
-                            mask_strength  = mask_strength,
-                            mask_padding_W = mask_padding_W,
-                            mask_padding_H = mask_padding_H,
-                            mask_threshold = mask_threshold,
-                                    prompt = prompt, 
-                           negative_prompt = negative_prompt, 
-                                 num_steps = num_steps, 
-                identitynet_strength_ratio = strength_identitynet, 
-                 ip_adapter_strength_ratio = strength_ip_adapter, 
-                            guidance_scale = guidance_scale, 
-                                      seed = generation_seed, 
-                                enable_LCM = enable_LCM, 
-                       enhance_face_region = enhance_face,
-                          reface_mask_only = reface_mask_only, 
-                              MODEL_CONFIG = MODEL_CONFIG,
-        )
+        generated_image = swap_face_only()
 
         # Response
         print('\nResponding ...')

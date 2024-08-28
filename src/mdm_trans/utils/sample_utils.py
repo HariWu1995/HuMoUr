@@ -14,9 +14,6 @@ from src.mdm_trans.data_loaders.humanml.scripts.motion_process import recover_fr
 from src.mdm_trans.data_loaders.tensors import collate, get_cond
 from src.mdm_trans.data_loaders.get_data import get_dataset, dataset_loader_from_data
 
-from src.mdm_trans.model.cfg_sampler import ClassifierFreeSampleModel
-
-from src.mdm_trans.utils.model_util import create_model_and_diffusion, load_model_wo_clip
 from src.mdm_trans.utils.visualize import plot_3d_motion
 from src.mdm_trans.utils.misc import recursive_op1, tensor_to_device
 
@@ -45,8 +42,8 @@ def get_sample_vars(args: int, data: int, model: int, texts: List[str],
     args.batch_size = args.num_samples
 
     if is_using_data:
-        data_loader = dataset_loader_from_data(data, args.dataset, args.batch_size, num_workers=0)  # use 0 workers to always obtain the same data samples
         fix_seed(args.seed)  # re-fix the seed so we get same texts even when running models w/ different architectures
+        data_loader = dataset_loader_from_data(data, args.dataset, args.batch_size, num_workers=0)  # use 0 workers to always obtain the same data samples
         iterator = iter(data_loader)
         _, model_kwargs = next(iterator)
         max_frames = model_kwargs['y']['lengths'].max().item()
@@ -77,63 +74,6 @@ def get_sample_vars(args: int, data: int, model: int, texts: List[str],
 def get_niter(model_path):
     niter = os.path.basename(model_path).replace('model', '').replace('.pt', '')
     return niter
-
-
-def init_main(args, additional_model_args={}):
-    """ 
-    This method does initializations that should be done in the main method.
-    Most of these initializations are time intensive.
-    The internal method can thus be called from multiple mains, 
-    e.g., 'generate()' may be called from its own main as well as from 'train'.
-    """
-    fix_seed(args.seed)
-    dist_util.setup_dist(args.device)
-
-    print(f'Loading dataset {args.data_dir}')
-    data = get_dataset(name=args.dataset, split='test', hml_mode='text_only', datapath=args.data_dir)
-    
-    print("Creating model and diffusion...")
-    model, diffusion = create_model_and_diffusion(args, data, additional_model_args)
-
-    print(f"Loading checkpoints from [{args.model_path}]...")
-    state_dict = torch.load(args.model_path, map_location='cpu')
-    load_model_wo_clip(model, state_dict)
-    
-    if args.guidance_param != 1:
-        # wrapping model with the classifier-free sampler
-        model = ClassifierFreeSampleModel(model)   
-    model.to(dist_util.dev())
-    model.eval()  # disable random masking
-
-    return data, model, diffusion
-
-
-def save_results(args, out_path, all_motions, all_lengths, all_text):
-    assert all_motions.shape[-2] == 3, \
-        f"Expected 3 channels for XYZ, but got {all_motions.shape[-2]}"
-    
-    if os.path.exists(out_path):
-        shutil.rmtree(out_path)
-    os.makedirs(out_path)
-
-    npy_path = os.path.join(out_path, 'results.npy')
-    print(f"saving results file to [{npy_path}]")
-    np.save(npy_path,
-            {'motion': all_motions, 
-               'text': all_text, 
-            'lengths': all_lengths,
-        'num_samples': args.num_samples, 
-    'num_repetitions': args.num_repetitions,})
-
-    with open(npy_path.replace('.npy', '.txt'), 'w') as fw:
-        fw.write('\n'.join(all_text))
-    
-    with open(npy_path.replace('.npy', '_len.txt'), 'w') as fw:
-        fw.write('\n'.join([str(l) for l in all_lengths]))
-
-    args_path = os.path.join(out_path, 'args.json')
-    with open(args_path, 'w') as fw:
-        json.dump(vars(args), fw, indent=4, sort_keys=True)
 
 
 def sample_motions(args, model, shape, model_kwargs, max_frames, init_noise, sample_func):
@@ -172,7 +112,7 @@ def sample_motions(args, model, shape, model_kwargs, max_frames, init_noise, sam
     all_motions = all_motions[:total_num_samples]  # [bs, njoints, 6, seqlen]
     all_text    = all_text[   :total_num_samples]
     all_lengths = np.concatenate(all_lengths, axis=0)[:total_num_samples]
-    return all_motions,all_lengths,all_text
+    return all_motions, all_lengths, all_text
 
 
 def get_xyz_rep(data, all_motions):
@@ -180,29 +120,7 @@ def get_xyz_rep(data, all_motions):
     # Recover XYZ *positions* from HumanML3D vector representation
     all_motions = data.t2m_dataset.inv_transform(all_motions.transpose(0, 2, 3, 1))
     all_motions = recover_from_ric(torch.from_numpy(all_motions), data.n_joints).numpy()
+    
     xyz_samples = all_motions.reshape(-1, *all_motions.shape[2:]).transpose(0, 2, 3, 1)
-   
     return xyz_samples
-
-
-def prepare_plot(rep_i, sample_i, args, fps, 
-                 all_motions, all_text, all_lengths, 
-                 kinematic_chain, crop=False):
-    
-    assert all_motions.shape[-2] == 3, \
-        f"Expected 3 channels for XYZ, but got {all_motions.shape[-2]}"
-    
-    length = all_lengths[rep_i*args.batch_size + sample_i]
-    motion = all_motions[rep_i*args.batch_size + sample_i]
-    caption = all_text[rep_i*args.batch_size + sample_i]
-
-    motion = motion.transpose(2, 0, 1)
-    if crop:
-        motion = motion[:length]
-    else:
-        # duplicate the last frame to end of motion, so all motions will be in equal length
-        motion[length:-1] = motion[length-1]  
-        
-    plot = plot_3d_motion(kinematic_chain, motion, dataset=args.dataset, title=caption, fps=fps)
-    return plot
 
