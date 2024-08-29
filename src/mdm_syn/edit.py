@@ -37,6 +37,7 @@ def main(args):
     fix_seed(args.seed)
     dist_util.setup_dist(args.device)
 
+    sin_anim = None
     num_joints = None
     max_frames = 196 if args.dataset == 'humanml' else 60
     repr = 'repr6d' if args.repr == '6d' else 'quat'

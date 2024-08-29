@@ -180,14 +180,7 @@ def main(args):
 
             print(f"created {len(all_motions) * args.batch_size} samples")
 
-    # param update for unfolding visualization
-    # out of for rep_i
-    old_num_samples = args.num_samples
-    args.num_samples = 1
-    args.batch_size = 1
-    n_frames = final_n_frames
-
-    all_lengths = [n_frames] * args.num_repetitions
+    all_lengths = [final_n_frames] * args.num_repetitions
     all_motions = np.concatenate(all_motions, axis=0)
     all_motions = all_motions[:total_num_samples]  # [bs, njoints, 6, seqlen]
     all_text    =    all_text[:total_num_samples]

@@ -89,6 +89,11 @@ def main():
     # if args.dataset == 'babel':
     #     skeleton = paramUtil.t2m_kinematic_chain
 
+    # param update for unfolding visualization out of for rep_i
+    exp_num_samples = args.num_samples
+    args.num_samples = 1
+    args.batch_size = 1
+
     sample_files = []
     for sample_i in range(args.num_samples):
 
@@ -97,7 +102,7 @@ def main():
 
         for rep_i, samples_type_i in zip(range(args.num_repetitions), samples_type):
             caption = [f'{samples_type_i} {all_text[0]}'] * (y_lengths[0] - int(args.handshake_size/2))
-            for ii in range(1, old_num_samples):
+            for ii in range(1, exp_num_samples):
                 caption += [f'{samples_type_i} {all_text[ii]}'] * (int(y_lengths[ii]) - args.handshake_size)
             caption += [f'{samples_type_i} {all_text[ii]}'] * (int(args.handshake_size/2))
 

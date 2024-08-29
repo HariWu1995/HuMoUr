@@ -6,6 +6,7 @@ import torch
 import torch.nn.functional as F
 
 from src.utils import dist_util
+from src.utils.seeding import fix_seed
 
 from src.mdm_trans.model.cfg_sampler import ClassifierFreeSampleModel
 from src.mdm_trans.utils.model_util import load_into_model_format
