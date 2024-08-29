@@ -27,7 +27,7 @@ def main():
     os.makedirs(out_path)
 
     all_motions, all_text, all_lengths, \
-        data, model, model_kwargs, \
+    input_motions, data, model, model_kwargs, \
         gt_frames_per_sample, n_joints, fps = edit_pipe(args)
 
     npy_path = os.path.join(out_path, 'results.npy')
@@ -50,7 +50,8 @@ def main():
 
     # Recover XYZ *positions* from HumanML3D vector representation
     if model.data_rep == 'hml_vec':
-        input_motions = data.dataset.t2m_dataset.inv_transform(input_motions.cpu().permute(0, 2, 3, 1)).float()
+        input_motions = input_motions.cpu().permute(0, 2, 3, 1)
+        input_motions = data.dataset.t2m_dataset.inv_transform(input_motions).float()
         input_motions = recover_from_ric(input_motions, n_joints)
         input_motions = input_motions.view(-1, *input_motions.shape[2:]).permute(0, 2, 3, 1).cpu().numpy()
 

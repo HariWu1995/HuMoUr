@@ -74,8 +74,8 @@ def main():
                             gt_frames=gt_frames_per_sample.get(sample_i, []))
 
         for rep_i in range(args.num_repetitions):
-            motion = all_motions[rep_i * args.batch_size + sample_i].transpose(2, 0, 1)[:length]
             length = all_lengths[rep_i * args.batch_size + sample_i]
+            motion = all_motions[rep_i * args.batch_size + sample_i].transpose(2, 0, 1)[:length]
             caption  =  all_text[rep_i * args.batch_size + sample_i]
 
             if args.guidance_param == 0:

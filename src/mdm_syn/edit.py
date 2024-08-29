@@ -256,7 +256,7 @@ def main(args):
         range_t=range_t
     )
 
-    sample = postprocess(sample, motion_data, model, data, args, prefix_save='sample_')
+    sample = postprocess(sample, motion_data, model, data, sin_anim, args, prefix_save='sample_')
 
     if args.unconstrained:
         all_text.extend([args.edit_mode] * args.num_samples)
@@ -275,12 +275,13 @@ def main(args):
     all_motions = all_motions[:total_num_samples]  # [bs, njoints, 6, seqlen]
     all_text    =    all_text[:total_num_samples]
 
-    input_motions = postprocess(input_motions, motion_data, model, data, args, prefix_save='input_')
+    input_motions = postprocess(input_motions, motion_data, model, data, sin_anim, args, prefix_save='input_')
+
+    if model.data_rep == 'hml_vec':
+        num_joints = 22 if motions.shape[1] == 263 else 21
 
     return all_motions, all_text, all_lengths, \
-         input_motions, skeleton, data, gt_frames_per_sample, \
-        (22 if motions.shape[1] == 263 else 21) 
-            if model.data_rep == 'hml_vec' else num_joints, fps
+         input_motions, skeleton, data, gt_frames_per_sample, num_joints, fps
 
 
 def load_dataset(args, max_frames, n_frames):
@@ -293,7 +294,7 @@ def load_dataset(args, max_frames, n_frames):
     return data
 
 
-def postprocess(motions, motion_data, model, data, args, prefix_save: str = 'prefix_'):
+def postprocess(motions, motion_data, model, data, sin_anim, args, prefix_save: str = 'prefix_'):
 
     # Recover XYZ *positions* from HumanML3D vector representation
     if model.data_rep == 'hml_vec':

@@ -113,7 +113,9 @@ def main(args):
                 model_kwargs['y']['lengths'][ii] = max_arb_len
             if len_s < min_arb_len:
                 model_kwargs['y']['lengths'][ii] = min_arb_len
-        samples_per_rep_list, samples_type = double_take_arb_len(args, diffusion, model, model_kwargs, max_arb_len)
+
+        samples_per_rep_list, \
+        samples_type = double_take_arb_len(args, diffusion, model, model_kwargs, max_arb_len)
 
         step_sizes = np.zeros(len(model_kwargs['y']['lengths']), dtype=int)
         for ii, len_i in enumerate(model_kwargs['y']['lengths']):
@@ -191,7 +193,7 @@ def main(args):
     all_text    =    all_text[:total_num_samples]
     
     return all_motions, all_text, all_lengths, \
-            data, model_kwargs, n_joints, step_sizes, fps
+            data, model_kwargs, samples_type, n_joints, step_sizes, fps
 
 
 def load_dataset(args, n_frames):

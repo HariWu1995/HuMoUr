@@ -140,5 +140,5 @@ def main(args):
     all_lengths = np.concatenate(all_lengths, axis=0)[:total_num_samples]
 
     return all_motions, all_text, all_lengths, \
-            data, model, model_kwargs, gt_frames_per_sample, n_joints, fps
+        input_motions, data, model, model_kwargs, gt_frames_per_sample, n_joints, fps
 

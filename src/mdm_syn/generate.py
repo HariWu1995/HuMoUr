@@ -36,6 +36,7 @@ def main(args):
     motion_data = None
     num_joints = None
     n_frames = None
+    sin_anim = None
     repr = 'repr6d' if args.repr == '6d' else 'quat'
 
     if args.dataset == 'mixamo':
@@ -128,7 +129,7 @@ def main(args):
     )
 
     setattr(args, 'n_frames', n_frames)
-    sample = postprocess(sample, motion_data, model, data, args, prefix_save='sample_')
+    sample = postprocess(sample, motion_data, model, data, sin_anim, args, prefix_save='sample_')
 
     if args.unconstrained:
         all_text += ['generated'] * args.num_samples
@@ -163,7 +164,7 @@ def load_dataset(args, max_frames, n_frames):
     return data
 
 
-def postprocess(motions, motion_data, model, data, args, prefix_save: str = 'prefix_'):
+def postprocess(motions, motion_data, model, data, sin_anim, args, prefix_save: str = 'prefix_'):
 
     # Recover XYZ *positions* from HumanML3D vector representation
     if model.data_rep == 'hml_vec':

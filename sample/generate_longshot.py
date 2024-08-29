@@ -64,7 +64,7 @@ def main():
     os.makedirs(out_path)
 
     all_motions, all_text, all_lengths, \
-    data, model_kwargs, n_joints, step_sizes, fps = generate_pipe(args)
+    data, model_kwargs, samples_type, n_joints, step_sizes, fps = generate_pipe(args)
 
     frame_colors = calc_frame_colors(args.handshake_size, args.blend_len, step_sizes, model_kwargs['y']['lengths'])
     

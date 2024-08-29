@@ -123,6 +123,7 @@ def main(args):
         )
 
         # Recover XYZ *positions* from HumanML3D vector representation
+        n_joints = None
         if model.data_rep == 'hml_vec':
             n_joints = 22 if sample.shape[1] == 263 else 21
             sample = data.dataset.t2m_dataset.inv_transform(sample.cpu().permute(0, 2, 3, 1)).float()
