@@ -28,7 +28,7 @@ def main():
     os.makedirs(out_path)
 
     all_motions, all_text, all_lengths, \
-    input_motions, data, model_kwargs, n_joints, fps = edit_inpainting_pipe(args_list)
+    input_motions, data, model, model_kwargs, n_joints, fps = edit_inpainting_pipe(args_list)
 
     npy_path = os.path.join(out_path, 'results.npy')
     print(f"saving results file to [{npy_path}]")

@@ -27,7 +27,7 @@ def main():
     os.makedirs(out_path)
 
     all_motions, all_text, all_lengths, \
-        data, model_kwargs, \
+        data, model, model_kwargs, \
         gt_frames_per_sample, n_joints, fps = edit_pipe(args)
 
     npy_path = os.path.join(out_path, 'results.npy')

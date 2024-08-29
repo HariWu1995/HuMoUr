@@ -35,6 +35,7 @@ def main(args):
     
     motion_data = None
     num_joints = None
+    n_frames = None
     repr = 'repr6d' if args.repr == '6d' else 'quat'
 
     if args.dataset == 'mixamo':
@@ -60,7 +61,7 @@ def main(args):
 
     max_frames = 196 if args.dataset == 'humanml' else 60
     if args.motion_length is not None:
-        n_frames = int(args.motion_length*fps)
+        n_frames = int(args.motion_length * fps)
     elif not args.dataset in ['mixamo', 'bvh_general']:
         n_frames = max_frames
 
@@ -126,7 +127,8 @@ def main(args):
         const_noise=False,
     )
 
-    sample = postprocess(sample, model, data, args, prefix_save='sample_')
+    setattr(args, 'n_frames', n_frames)
+    sample = postprocess(sample, motion_data, model, data, args, prefix_save='sample_')
 
     if args.unconstrained:
         all_text += ['generated'] * args.num_samples
@@ -161,7 +163,7 @@ def load_dataset(args, max_frames, n_frames):
     return data
 
 
-def postprocess(motions, model, data, args, prefix_save: str = 'prefix_'):
+def postprocess(motions, motion_data, model, data, args, prefix_save: str = 'prefix_'):
 
     # Recover XYZ *positions* from HumanML3D vector representation
     if model.data_rep == 'hml_vec':
@@ -180,7 +182,7 @@ def postprocess(motions, model, data, args, prefix_save: str = 'prefix_'):
         else:
             joint_features_length = 7 if args.repr == 'quat' else 9
             assert model.njoints % joint_features_length == 0
-            xyz_samples = np.zeros((args.num_samples, n_frames, int(model.njoints / joint_features_length), 3))  # shape it to match the output of anim_pos
+            xyz_samples = np.zeros((args.num_samples, args.n_frames, int(model.njoints / joint_features_length), 3))  # shape it to match the output of anim_pos
 
         for i, one_sample in enumerate(motions):
             bvh_path = os.path.join(args.out_path, f'{prefix_save}{0:02d}.bvh')
@@ -197,7 +199,7 @@ def postprocess(motions, model, data, args, prefix_save: str = 'prefix_'):
                                    parents=generated_motion.bvh_file.skeleton.parent)
             else:
                 if args.repr == '6d':
-                    one_sample = one_sample.reshape(n_frames, -1, joint_features_length)
+                    one_sample = one_sample.reshape(args.n_frames, -1, joint_features_length)
                     quats = repr6d2quat(torch.tensor(one_sample[:, :, 3:])).numpy()
                 else:
                     quats = one_sample[:, :, 3:]

@@ -115,7 +115,7 @@ def main(args_list):
     all_text = all_text[:total_num_samples]
 
     return all_motions, all_text, all_lengths, \
-        input_motions, data, model_kwargs, n_joints, fps
+        input_motions, data, model, model_kwargs, n_joints, fps
             
 
 

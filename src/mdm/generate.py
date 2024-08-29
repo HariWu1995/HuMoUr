@@ -157,7 +157,7 @@ def main(args):
     all_text    =    all_text[:total_num_samples]
 
     return all_motions, all_text, all_lengths, \
-            data, model_kwargs, gt_frames_per_sample, n_joints, fps
+                data, model_kwargs, n_joints, fps
 
 
 def load_dataset(args, max_frames, n_frames):

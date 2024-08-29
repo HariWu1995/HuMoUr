@@ -74,7 +74,7 @@ def main():
                            'text': all_text, 
                         'lengths': all_lengths,
                     'num_samples': args.num_samples, 
-                'num_repetitions': num_repetitions, 
+                'num_repetitions': args.num_repetitions, 
                    'frame_colors': frame_colors,    })
     
     with open(npy_path.replace('.npy', '.txt'), 'w') as fw:
@@ -95,7 +95,7 @@ def main():
         rep_files = []
         y_lengths = model_kwargs['y']['lengths']
 
-        for rep_i, samples_type_i in zip(range(num_repetitions), samples_type):
+        for rep_i, samples_type_i in zip(range(args.num_repetitions), samples_type):
             caption = [f'{samples_type_i} {all_text[0]}'] * (y_lengths[0] - int(args.handshake_size/2))
             for ii in range(1, old_num_samples):
                 caption += [f'{samples_type_i} {all_text[ii]}'] * (int(y_lengths[ii]) - args.handshake_size)
@@ -118,10 +118,10 @@ def main():
             
             rep_files.append(animation_save_path)
         
-        if num_repetitions > 1:
+        if args.num_repetitions > 1:
             all_rep_save_file = os.path.join(out_path, 'sample{:02d}.mp4'.format(sample_i))
             ffmpeg_rep_files = [f' -i {f} ' for f in rep_files]
-            hstack_args = f' -filter_complex hstack=inputs={num_repetitions}' if num_repetitions > 1 else ''
+            hstack_args = f' -filter_complex hstack=inputs={args.num_repetitions}' if args.num_repetitions > 1 else ''
             ffmpeg_rep_cmd = f'ffmpeg -y -loglevel warning ' + ''.join(ffmpeg_rep_files) + f'{hstack_args} {all_rep_save_file}'
             os.system(ffmpeg_rep_cmd)
 

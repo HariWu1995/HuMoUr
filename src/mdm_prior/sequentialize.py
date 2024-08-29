@@ -185,12 +185,10 @@ def main(args):
     args.batch_size = 1
     n_frames = final_n_frames
 
-    num_repetitions = args.num_repetitions
-
+    all_lengths = [n_frames] * args.num_repetitions
     all_motions = np.concatenate(all_motions, axis=0)
     all_motions = all_motions[:total_num_samples]  # [bs, njoints, 6, seqlen]
     all_text    =    all_text[:total_num_samples]
-    all_lengths = [n_frames] * num_repetitions
     
     return all_motions, all_text, all_lengths, \
             data, model_kwargs, n_joints, step_sizes, fps

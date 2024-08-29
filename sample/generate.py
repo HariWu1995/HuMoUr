@@ -29,8 +29,7 @@ def main():
     os.makedirs(out_path)
 
     all_motions, all_text, all_lengths, \
-        data, model_kwargs, \
-        gt_frames_per_sample, n_joints, fps = generate_pipe(args)
+        data, model_kwargs, n_joints, fps = generate_pipe(args)
 
     npy_path = os.path.join(out_path, 'results.npy')
     print(f"saving results file to [{npy_path}]")
