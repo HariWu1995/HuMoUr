@@ -18,9 +18,7 @@ from src.mdm_prior.utils.parser_util import generate_args
 from src.mdm_prior.model.DoubleTake_MDM import doubleTake_MDM
 from src.mdm_prior.model.cfg_sampler import ClassifierFreeSampleModel
 
-import src.mdm_prior.data_loaders.humanml.utils.paramUtil as paramUtil
 from src.mdm_prior.data_loaders.get_data import get_dataset_loader
-from src.mdm_prior.data_loaders.humanml.utils.plot_script import plot_3d_motion
 from src.mdm_prior.data_loaders.humanml.scripts.motion_process import recover_from_ric
 
 from src.mdm_prior.utils.sampling_utils import unfold_sample_arb_len, double_take_arb_len
@@ -131,6 +129,7 @@ def main(args):
             sample = unfold_sample_arb_len(sample_i, args.handshake_size, step_sizes, final_n_frames, model_kwargs)
 
             # Recover XYZ *positions* from HumanML3D vector representation
+            n_joints = None
             if model.data_rep == 'hml_vec':
                 n_joints = 22 if sample.shape[1] == 263 else 21
                 sample = data.dataset.t2m_dataset.inv_transform(sample.cpu().permute(0, 2, 3, 1)).float()
@@ -163,17 +162,19 @@ def main(args):
                     rot2xyz_pose_rep = 'rot6d'
                 rot2xyz_mask = None
 
-                sample = model.rot2xyz(x=sample, mask=rot2xyz_mask, pose_rep=rot2xyz_pose_rep, glob=True, translation=True,
-                                       jointstype='smpl', vertstrans=True, betas=None, beta=0, glob_rot=None,
-                                       get_rotations_back=False)
+                sample = model.rot2xyz(x=sample, mask=rot2xyz_mask, 
+                                       pose_rep=rot2xyz_pose_rep, glob=True, translation=True,
+                                       jointstype='smpl', vertstrans=True, betas=None, beta=0, 
+                                       glob_rot=None, get_rotations_back=False)
 
             text_key = 'text' if 'text' in model_kwargs['y'] else 'action_text'
 
-            all_text += model_kwargs['y'][text_key]
+            all_text     += model_kwargs['y'][text_key]
             all_captions += model_kwargs['y'][text_key]
 
+            length = model_kwargs['y']['lengths']
+            all_lengths.append(length.cpu().numpy())
             all_motions.append(sample.cpu().numpy())
-            all_lengths.append(model_kwargs['y']['lengths'].cpu().numpy())
 
             print(f"created {len(all_motions) * args.batch_size} samples")
 
@@ -188,10 +189,11 @@ def main(args):
 
     all_motions = np.concatenate(all_motions, axis=0)
     all_motions = all_motions[:total_num_samples]  # [bs, njoints, 6, seqlen]
-    all_text = all_text[:total_num_samples]
+    all_text    =    all_text[:total_num_samples]
     all_lengths = [n_frames] * num_repetitions
     
-    return all_motions, all_text, all_lengths, model_kwargs['y']['lengths']
+    return all_motions, all_text, all_lengths, \
+            data, model_kwargs, n_joints, step_sizes, fps
 
 
 def load_dataset(args, n_frames):

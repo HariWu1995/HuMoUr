@@ -7,14 +7,12 @@ import torch.nn.functional as F
 
 from src.utils import dist_util
 
+from src.mdm_trans.model.cfg_sampler import ClassifierFreeSampleModel
 from src.mdm_trans.utils.model_util import load_into_model_format
 from src.mdm_trans.utils.model_util import create_model_and_diffusion, load_model_wo_clip
 from src.mdm_trans.utils.parser_util import transfer_args
 from src.mdm_trans.utils.sample_utils import get_niter, get_sample_vars, sample_motions, \
                                             get_xyz_rep, get_max_frames
-from src.mdm_trans.model.cfg_sampler import ClassifierFreeSampleModel
-
-import src.mdm_trans.data_loaders.humanml.utils.paramUtil as paramUtil
 from src.mdm_trans.data_loaders.humanml_utils import HumanMlNormalizer, load_motions
 
 

@@ -1,6 +1,10 @@
+import os
+import shutil
+import numpy as np
+
 from src.mdm_trans.transfer import main as transfer_pipe
 from src.mdm_trans.utils.parser_util import transfer_args
-from src.mdm_trans.utils.visualize import save_multiple_samples
+from src.mdm_trans.utils.visualize import plot_3d_motion, save_multiple_samples
 
 import src.mdm_trans.data_loaders.humanml.utils.paramUtil as paramUtil
 
@@ -8,6 +12,7 @@ import src.mdm_trans.data_loaders.humanml.utils.paramUtil as paramUtil
 def main():
 
     args = transfer_args()
+
     all_motions, all_text, all_lengths, \
     out_path, fps, max_frames, transfer_idx, n_followers = transfer_pipe(args)
 

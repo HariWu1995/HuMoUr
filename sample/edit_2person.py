@@ -1,5 +1,12 @@
+import os
+import shutil
+import numpy as np
+
 from src.mdm_prior.complete import main as edit_pipe
 from src.mdm_prior.utils.parser_util import edit_multi_args
+
+import src.mdm_prior.data_loaders.humanml.utils.paramUtil as paramUtil
+from src.mdm_prior.data_loaders.humanml.utils.plot_script import plot_3d_motion
 
 
 def main():
@@ -20,8 +27,8 @@ def main():
         shutil.rmtree(out_path)
     os.makedirs(out_path)
 
-    all_motions, all_text, all_lengths, \
-            sample, sample1, gt_save = edit_pipe(args)
+    all_motions, all_text, all_lengths, sample, sample1, \
+     data, model_kwargs, gt_save, gt_frames_per_sample, fps = edit_pipe(args)
 
     npy_path = os.path.join(out_path, 'results.npy')
     print(f"saving results file to [{npy_path}]")
@@ -48,9 +55,9 @@ def main():
     for sample_i in range(args.num_samples):
         rep_files = []
         for rep_i in range(args.num_repetitions):
-            caption = f'Prefix Completion'
-            length = all_lengths[rep_i*args.batch_size + sample_i] - 1
-            motion = all_motions[rep_i*args.batch_size + sample_i].transpose(2, 0, 1)[:length]
+            caption = 'Prefix Completion'
+            length = all_lengths[rep_i * args.batch_size + sample_i] - 1
+            motion = all_motions[rep_i * args.batch_size + sample_i].transpose(2, 0, 1)[:length]
             motion1 = None
             if sample1 is not None:
                 motion1 = sample1[sample_i].transpose(2, 0, 1)[:length]

@@ -21,7 +21,6 @@ from src.mdm_syn.utils.model_util import create_model_and_diffusion, load_model
 import src.mdm_syn.data_loaders.humanml.utils.paramUtil as paramUtil
 from src.mdm_syn.data_loaders.humanml import humanml_utils
 from src.mdm_syn.data_loaders.humanml.scripts.motion_process import recover_from_ric
-from src.mdm_syn.data_loaders.humanml.utils.plot_script import plot_3d_motion
 from src.mdm_syn.data_loaders.mixamo import mixamo_utils
 from src.mdm_syn.data_loaders.mixamo.motion import MotionData
 from src.mdm_syn.data_loaders.data_util import load_sin_motion
@@ -115,19 +114,20 @@ def main(args):
 
     num_rows = args.num_samples
     if args.edit_mode == 'expansion':
-        first_frame = copy.deepcopy(motion[:,:,0:1])
-        last_frame = copy.deepcopy(motion[:,:,-2:-1])
+        first_frame = copy.deepcopy(motion[:, :, 0:1])
+        last_frame = copy.deepcopy(motion[:, :, -2:-1])
 
-        first_frame[-4,...] = 0
-        first_frame[-6,...] = 0
+        first_frame[-4, ...] = 0
+        first_frame[-6, ...] = 0
         last_frame[-4, ...] = 0
         last_frame[-6, ...] = 0
 
-        motion_prefix = first_frame.repeat((1, 1, int(motion.shape[-1]*args.prefix_length)))
-        motion_suffix = last_frame.repeat((1, 1, int(motion.shape[-1]*args.suffix_length)))
+        motion_prefix = first_frame.repeat((1, 1, int(motion.shape[-1] * args.prefix_length)))
+        motion_suffix = last_frame.repeat((1, 1, int(motion.shape[-1] * args.suffix_length)))
         outpaint_upto_idx = motion_prefix.shape[-1]
         outpaint_from_idx = motion_prefix.shape[-1] + motion.shape[-1]
-        motion = torch.cat(( motion_prefix, motion, motion_suffix), 2)
+        motion = torch.cat((motion_prefix, motion, motion_suffix), 2)
+
         n_frames = motion.shape[-1]
 
     input_motions = motion.repeat((num_rows, 1, 1, 1))
@@ -150,7 +150,9 @@ def main(args):
         for i, length in enumerate(model_kwargs['y']['lengths'].cpu().numpy()):
             start_idx, end_idx = int(args.prefix_end * length), int(args.suffix_start * length)
             gt_frames_per_sample[i] = list(range(0, start_idx)) + list(range(end_idx, max_frames))
-            model_kwargs['y']['inpainting_mask'][i, :, :, start_idx: end_idx] = False  # do inpainting in those frames
+            
+            # do inpainting in those frames
+            model_kwargs['y']['inpainting_mask'][i, :, :, start_idx: end_idx] = False
             
             mask_slope = 10
             for f in range(mask_slope):
@@ -254,7 +256,7 @@ def main(args):
         range_t=range_t
     )
 
-    sample = postprocess(sample, model, args, prefix_save='sample_')
+    sample = postprocess(sample, model, data, args, prefix_save='sample_')
 
     if args.unconstrained:
         all_text.extend([args.edit_mode] * args.num_samples)
@@ -273,10 +275,12 @@ def main(args):
     all_motions = all_motions[:total_num_samples]  # [bs, njoints, 6, seqlen]
     all_text    =    all_text[:total_num_samples]
 
-    input_motions = postprocess(input_motions, model, args, prefix_save='input_')
+    input_motions = postprocess(input_motions, model, data, args, prefix_save='input_')
 
     return all_motions, all_text, all_lengths, \
-         input_motions, skeleton, gt_frames_per_sample
+         input_motions, skeleton, data, gt_frames_per_sample, \
+        (22 if motions.shape[1] == 263 else 21) 
+            if model.data_rep == 'hml_vec' else num_joints, fps
 
 
 def load_dataset(args, max_frames, n_frames):
@@ -289,10 +293,11 @@ def load_dataset(args, max_frames, n_frames):
     return data
 
 
-def postprocess(motions, model, args, prefix_save: str = 'prefix_'):
+def postprocess(motions, model, data, args, prefix_save: str = 'prefix_'):
 
     # Recover XYZ *positions* from HumanML3D vector representation
     if model.data_rep == 'hml_vec':
+        n_joints = 22 if motions.shape[1] == 263 else 21
         motions = data.dataset.t2m_dataset.inv_transform(motions.cpu().permute(0, 2, 3, 1)).float()
         motions = recover_from_ric(motions, n_joints)
         motions = motions.view(-1, *motions.shape[2:]).permute(0, 2, 3, 1).cpu().numpy()

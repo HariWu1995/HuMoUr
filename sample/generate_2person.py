@@ -1,5 +1,12 @@
+import os
+import shutil
+import numpy as np
+
 from src.mdm_prior.communicate import main as generate_pipe
 from src.mdm_prior.utils.parser_util import generate_multi_args
+
+from src.mdm_prior.data_loaders.humanml.utils.plot_script import plot_3d_motion
+import src.mdm_prior.data_loaders.humanml.utils.paramUtil as paramUtil
 
 
 def main():
@@ -28,7 +35,7 @@ def main():
     os.makedirs(out_path)
 
     all_motions, all_text, all_lengths, \
-                        sample, sample1 = generate_pipe(args)
+    sample, sample1, data, model_kwargs, n_joints, fps = generate_pipe(args)
 
     npy_path = os.path.join(out_path, 'results.npy')
     print(f"saving results file to [{npy_path}]")
@@ -58,9 +65,9 @@ def main():
         rep_files = []
         for rep_i in range(args.num_repetitions):
 
-            caption  =  all_text[rep_i*args.batch_size + sample_i]
-            length = all_lengths[rep_i*args.batch_size + sample_i] - 1
-            motion = all_motions[rep_i*args.batch_size + sample_i].transpose(2, 0, 1)[:length]
+            caption  =  all_text[rep_i * args.batch_size + sample_i]
+            length = all_lengths[rep_i * args.batch_size + sample_i] - 1
+            motion = all_motions[rep_i * args.batch_size + sample_i].transpose(2, 0, 1)[:length]
             motion1 = None
 
             if sample1 is not None:
@@ -68,14 +75,13 @@ def main():
             save_file = 'sample{:02d}_rep{:02d}.mp4'.format(sample_i, rep_i)
             animation_save_path = os.path.join(out_path, save_file)
 
-            print(f'[({sample_i}) "{caption}" | Rep #{rep_i} | -> {save_file}]')
-            plot_3d_motion(animation_save_path, skeleton, motion, 
-                           dataset=args.dataset, title=caption, fps=fps, 
-                           vis_mode = 'gt' if args.sample_gt else 'default',
-                           joints2=motion1)#, captions=captions)
-                           
             # Credit for visualization: 
             #       https://github.com/EricGuo5513/text-to-motion
+            print(f'[({sample_i}) "{caption}" | Rep #{rep_i} | -> {save_file}]')
+            plot_3d_motion(animation_save_path, skeleton, motion, fps=fps, 
+                           dataset=args.dataset, joints2=motion1, title=caption, 
+                           vis_mode = 'gt' if args.sample_gt else 'default')#, captions=captions)
+                           
             rep_files.append(animation_save_path)
 
         if args.num_repetitions > 1:

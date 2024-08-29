@@ -17,10 +17,8 @@ from src.mdm.utils.parser_util import edit_args
 
 from src.mdm.model.cfg_sampler import ClassifierFreeSampleModel
 
-import src.mdm.data_loaders.humanml.utils.paramUtil as paramUtil
 from src.mdm.data_loaders import humanml_utils
 from src.mdm.data_loaders.get_data import get_dataset_loader
-from src.mdm.data_loaders.humanml.utils.plot_script import plot_3d_motion
 from src.mdm.data_loaders.humanml.scripts.motion_process import recover_from_ric
 
 
@@ -130,8 +128,9 @@ def main(args):
             sample = sample.view(-1, *sample.shape[2:]).permute(0, 2, 3, 1)
 
         all_text += model_kwargs['y']['text']
+        length    = model_kwargs['y']['lengths']
+        all_lengths.append(length.cpu().numpy())
         all_motions.append(sample.cpu().numpy())
-        all_lengths.append(model_kwargs['y']['lengths'].cpu().numpy())
 
         print(f"created {len(all_motions) * args.batch_size} samples")
 
@@ -140,5 +139,6 @@ def main(args):
     all_text = all_text[:total_num_samples]
     all_lengths = np.concatenate(all_lengths, axis=0)[:total_num_samples]
 
-    return all_motions, all_text, all_lengths
+    return all_motions, all_text, all_lengths, \
+            data, model_kwargs, gt_frames_per_sample, n_joints, fps
 

@@ -1,5 +1,12 @@
+import os
+import shutil
+import numpy as np
+
 from src.mdm_prior.sequentialize import main as generate_pipe
 from src.mdm_prior.utils.parser_util import generate_args
+
+import src.mdm_prior.data_loaders.humanml.utils.paramUtil as paramUtil
+from src.mdm_prior.data_loaders.humanml.utils.plot_script import plot_3d_motion
 
 
 def calc_frame_colors(handshake_size, blend_size, step_sizes, lengths):
@@ -56,11 +63,12 @@ def main():
         shutil.rmtree(out_path)
     os.makedirs(out_path)
 
-    all_motions, all_text, all_lengths, y_lengths = generate_pipe(args)
-    frame_colors = calc_frame_colors(args.handshake_size, args.blend_len, step_sizes, y_lengths)
+    all_motions, all_text, all_lengths, \
+    data, model_kwargs, n_joints, step_sizes, fps = generate_pipe(args)
+
+    frame_colors = calc_frame_colors(args.handshake_size, args.blend_len, step_sizes, model_kwargs['y']['lengths'])
     
     npy_path = os.path.join(out_path, 'results.npy')
-
     print(f"saving results file to [{npy_path}]")
     np.save(npy_path, {  'motion': all_motions, 
                            'text': all_text, 
@@ -83,26 +91,31 @@ def main():
 
     sample_files = []
     for sample_i in range(args.num_samples):
+
         rep_files = []
+        y_lengths = model_kwargs['y']['lengths']
+
         for rep_i, samples_type_i in zip(range(num_repetitions), samples_type):
             caption = [f'{samples_type_i} {all_text[0]}'] * (y_lengths[0] - int(args.handshake_size/2))
             for ii in range(1, old_num_samples):
-                caption += [f'{samples_type_i} {all_text[ii]}'] * (int(y_lengths[ii])-args.handshake_size)
-            
+                caption += [f'{samples_type_i} {all_text[ii]}'] * (int(y_lengths[ii]) - args.handshake_size)
             caption += [f'{samples_type_i} {all_text[ii]}'] * (int(args.handshake_size/2))
-            length = all_lengths[rep_i*args.batch_size + sample_i]
-            motion = all_motions[rep_i*args.batch_size + sample_i].transpose(2, 0, 1)[:length]
+
+            length = all_lengths[rep_i * args.batch_size + sample_i]
+            motion = all_motions[rep_i * args.batch_size + sample_i].transpose(2, 0, 1)[:length]
             
             save_file = 'sample{:02d}_rep{:02d}.mp4'.format(sample_i, rep_i)
             animation_save_path = os.path.join(out_path, save_file)
             print(f'[({sample_i}) "{set(caption)}" | Rep #{rep_i} | -> {save_file}]')
             
-            plot_3d_motion(animation_save_path, skeleton, motion, dataset=args.dataset, title=caption, fps=fps,
-                           vis_mode='gt' if args.sample_gt else 'unfold_arb_len', handshake_size=args.handshake_size,
-                           blend_size=args.blend_len,step_sizes=step_sizes, lengths=y_lengths)
-            
             # Credit for visualization: 
             #       https://github.com/EricGuo5513/text-to-motion
+            plot_3d_motion(animation_save_path, skeleton, motion, 
+                           dataset=args.dataset, title=caption, fps=fps,
+                           vis_mode='gt' if args.sample_gt else 'unfold_arb_len', 
+                           handshake_size=args.handshake_size, lengths=y_lengths,
+                           blend_size=args.blend_len, step_sizes=step_sizes)
+            
             rep_files.append(animation_save_path)
         
         if num_repetitions > 1:

@@ -1,5 +1,12 @@
+import os
+import shutil
+import copy
+import numpy as np
+
 from src.mdm_syn.generate import main as generate_pipe
 from src.mdm_syn.utils.parser_util import generate_args
+
+from src.mdm_syn.data_loaders.humanml.utils.plot_script import plot_3d_motion
 
 
 def main():
@@ -17,7 +24,8 @@ def main():
     os.makedirs(out_path)
 
     setattr(args, 'out_path', out_path)
-    all_motions, all_text, all_lengths, skeleton = generate_pipe(args)
+    all_motions, all_text, all_lengths, \
+    data, model_kwargs, skeleton, n_joints, fps = generate_pipe(args)
 
     npy_path = os.path.join(out_path, 'results.npy')
     print(f"saving results file to [{npy_path}]")
@@ -65,7 +73,8 @@ def main():
             args, out_path,
             row_print_template, all_print_template, 
             row_file_template, all_file_template,
-            caption, num_samples_in_out_file, rep_files, sample_files, sample_i
+            caption, num_samples_in_out_file, 
+            rep_files, sample_files, sample_i
         )
 
     abs_path = os.path.abspath(out_path)
@@ -99,8 +108,7 @@ def save_multiple_samples(args, out_path, row_print_template, all_print_template
         
         ffmpeg_rep_files = [f' -i {f} ' for f in sample_files]
         vstack_args = f' -filter_complex vstack=inputs={len(sample_files)}' if len(sample_files) > 1 else ''
-        ffmpeg_rep_cmd = f'ffmpeg -y -loglevel warning ' + ''.join(
-            ffmpeg_rep_files) + f'{vstack_args} {all_sample_save_path}'
+        ffmpeg_rep_cmd = f'ffmpeg -y -loglevel warning ' + ''.join(ffmpeg_rep_files) + f'{vstack_args} {all_sample_save_path}'
 
         os.system(ffmpeg_rep_cmd)
         sample_files = []

@@ -22,9 +22,7 @@ from src.mdm_prior.model.cfg_sampler import wrap_model
 
 from src.mdm_prior.data_loaders.get_data import get_dataset_loader
 from src.mdm_prior.data_loaders.humanml_utils import get_inpainting_mask
-from src.mdm_prior.data_loaders.humanml.utils.plot_script import plot_3d_motion
 from src.mdm_prior.data_loaders.humanml.scripts.motion_process import recover_from_ric
-import src.mdm_prior.data_loaders.humanml.utils.paramUtil as paramUtil
 
 
 def main(args_list):
@@ -98,6 +96,7 @@ def main(args_list):
         )
 
         # Recover XYZ *positions* from HumanML3D vector representation
+        n_joints = None
         if model.data_rep == 'hml_vec':
             n_joints = 22 if sample.shape[1] == 263 else 21
             sample = data.dataset.t2m_dataset.inv_transform(sample.cpu().permute(0, 2, 3, 1)).float()
@@ -105,8 +104,9 @@ def main(args_list):
             sample = sample.view(-1, *sample.shape[2:]).permute(0, 2, 3, 1)
 
         all_text += model_kwargs['y']['text']
+        length    = model_kwargs['y']['lengths']
+        all_lengths.append(length.cpu().numpy())
         all_motions.append(sample.cpu().numpy())
-        all_lengths.append(model_kwargs['y']['lengths'].cpu().numpy())
 
         print(f"created {len(all_motions) * args.batch_size} samples")
 
@@ -114,8 +114,9 @@ def main(args_list):
     all_motions = np.concatenate(all_motions, axis=0)[:total_num_samples]  # [bs, njoints, 6, seqlen]
     all_text = all_text[:total_num_samples]
 
-    return input_motions, model_kwargs['y']['lengths'], \
-            all_motions, all_text, all_lengths
+    return all_motions, all_text, all_lengths, \
+        input_motions, data, model_kwargs, n_joints, fps
+            
 
 
 if __name__ == "__main__":

@@ -1,5 +1,12 @@
-from src.mdm_prior.control import main as edit_inpainting_pipe
+import os
+import shutil
+import numpy as np
+
+from src.mdm_prior.control import main as edit_inpainting_pipe, recover_from_ric
 from src.mdm_prior.utils.parser_util import edit_inpainting_args
+
+from src.mdm_prior.data_loaders.humanml.utils.plot_script import plot_3d_motion
+import src.mdm_prior.data_loaders.humanml.utils.paramUtil as paramUtil
 
 
 def main():
@@ -20,8 +27,8 @@ def main():
         shutil.rmtree(out_path)
     os.makedirs(out_path)
 
-    input_motions, y_lengths, \
-      all_motions, all_text, all_lengths = edit_inpainting_pipe(args_list)
+    all_motions, all_text, all_lengths, \
+    input_motions, data, model_kwargs, n_joints, fps = edit_inpainting_pipe(args_list)
 
     npy_path = os.path.join(out_path, 'results.npy')
     print(f"saving results file to [{npy_path}]")
@@ -49,10 +56,12 @@ def main():
 
     gt_frames_per_sample = {}
     for sample_i in range(args.num_samples):
+
         rep_files = []
         if args.show_input:
             caption = 'Input Motion'
-            length =     y_lengths[sample_i]
+            input_lengths = model_kwargs['y']['lengths']
+            length = input_lengths[sample_i]
             motion = input_motions[sample_i].transpose(2, 0, 1)[:length]
 
             save_file = 'input_motion{:02d}.mp4'.format(sample_i)
@@ -65,24 +74,26 @@ def main():
                             gt_frames=gt_frames_per_sample.get(sample_i, []))
 
         for rep_i in range(args.num_repetitions):
-            caption = all_text[rep_i*args.batch_size + sample_i]
+            motion = all_motions[rep_i * args.batch_size + sample_i].transpose(2, 0, 1)[:length]
+            length = all_lengths[rep_i * args.batch_size + sample_i]
+            caption  =  all_text[rep_i * args.batch_size + sample_i]
+
             if args.guidance_param == 0:
                 caption = 'Edit [{}] unconditioned'.format(args.inpainting_mask)
             else:
-                caption = 'Edit [{}]: {}'.format(args.inpainting_mask, caption)
-                
-            length = all_lengths[rep_i*args.batch_size + sample_i]
-            motion = all_motions[rep_i*args.batch_size + sample_i].transpose(2, 0, 1)[:length]
+                caption = 'Edit [{}]: {}'.format(args.inpainting_mask, caption)                
             
             save_file = 'sample{:02d}_rep{:02d}.mp4'.format(sample_i, rep_i)
             animation_save_path = os.path.join(out_path, save_file)
             rep_files.append(animation_save_path)
 
+            # Credit for visualization: 
+            #   https://github.com/EricGuo5513/text-to-motion
             print(f'[({sample_i}) "{caption}" | Rep #{rep_i} | -> {animation_save_path}]')
             plot_3d_motion(animation_save_path, skeleton, motion, title=caption,
                            dataset=args.dataset, fps=fps, vis_mode=args.inpainting_mask,
-                           gt_frames=gt_frames_per_sample.get(sample_i, []), painting_features=args.inpainting_mask.split(','))
-            # Credit for visualization: https://github.com/EricGuo5513/text-to-motion
+                           gt_frames=gt_frames_per_sample.get(sample_i, []), 
+                           painting_features=args.inpainting_mask.split(','))
 
         if args.num_repetitions > 1:
             all_rep_save_file = os.path.join(out_path, 'sample{:02d}.mp4'.format(sample_i))

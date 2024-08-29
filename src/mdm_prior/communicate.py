@@ -20,9 +20,7 @@ from src.mdm_prior.model.cfg_sampler import ClassifierFreeSampleModel
 
 from src.mdm_prior.data_loaders.tensors import collate
 from src.mdm_prior.data_loaders.get_data import get_dataset_loader
-from src.mdm_prior.data_loaders.humanml.utils.plot_script import plot_3d_motion
 from src.mdm_prior.data_loaders.humanml.scripts.motion_process import recover_from_ric
-import src.mdm_prior.data_loaders.humanml.utils.paramUtil as paramUtil
 
 
 def main(args):
@@ -121,6 +119,7 @@ def main(args):
         diff_rot = torch.matmul(_rot0, _rot1.permute(0, 2, 1)).float().cpu()
 
         # Recover XYZ *positions* from HumanML3D vector representation
+        n_joints = None
         if model.data_rep == 'hml_vec':
             n_joints = 22 if sample.shape[1] == 263 else 21
             sample = data.dataset.t2m_dataset.inv_transform(sample.cpu().permute(0, 2, 3, 1)).float()
@@ -135,21 +134,22 @@ def main(args):
                 sample1 += diff_trans.view(-1, 1, 3, 1).cpu().numpy()
 
         text_key = 'text'
-        all_text += model_kwargs['y'][text_key]
+        all_text     += model_kwargs['y'][text_key]
         all_captions += model_kwargs['y'][text_key]
 
+        length = model_kwargs['y']['lengths']
+        all_lengths.append(length.cpu().numpy())
         all_motions.append(sample.cpu().numpy())
-        all_lengths.append(model_kwargs['y']['lengths'].cpu().numpy())
 
         print(f"created {len(all_motions) * args.batch_size} samples")
 
+    all_lengths = np.concatenate(all_lengths, axis=0)[:total_num_samples]
     all_motions = np.concatenate(all_motions, axis=0)
     all_motions = all_motions[:total_num_samples]  # [bs, njoints, 6, seqlen]
-    all_text = all_text[:total_num_samples]
-    all_lengths = np.concatenate(all_lengths, axis=0)[:total_num_samples]
+    all_text    =    all_text[:total_num_samples]
 
-    return all_motions, all_text, all_lengths, \
-            sample, sample1
+    return all_motions, all_text, all_lengths, sample, sample1, \
+            data, model_kwargs, n_joints, fps
 
 
 def load_dataset(args, max_frames, n_frames):

@@ -5,7 +5,6 @@ This can be used to produce samples for FID evaluation.
 """
 import os
 import shutil
-import copy
 
 import numpy as np
 import torch
@@ -20,7 +19,6 @@ from src.mdm_syn.data_loaders.tensors import collate
 from src.mdm_syn.data_loaders.get_data import get_dataset_loader
 from src.mdm_syn.data_loaders.mixamo.motion import MotionData
 from src.mdm_syn.data_loaders.humanml.scripts.motion_process import recover_from_ric
-from src.mdm_syn.data_loaders.humanml.utils.plot_script import plot_3d_motion
 import src.mdm_syn.data_loaders.humanml.utils.paramUtil as paramUtil
 
 from src.mdm_syn.motion import BVH
@@ -128,7 +126,7 @@ def main(args):
         const_noise=False,
     )
 
-    sample = postprocess(sample, model, args, prefix_save='sample_')
+    sample = postprocess(sample, model, data, args, prefix_save='sample_')
 
     if args.unconstrained:
         all_text += ['generated'] * args.num_samples
@@ -148,7 +146,9 @@ def main(args):
     all_motions = all_motions[:total_num_samples]  # [bs, njoints, 6, seqlen]
     all_text    =    all_text[:total_num_samples]
 
-    return all_motions, all_text, all_lengths
+    return all_motions, all_text, all_lengths, \
+            data, model_kwargs, skeleton, \
+            (22 if model.data_rep == 'hml_vec' else num_joints), fps
 
 
 def load_dataset(args, max_frames, n_frames):
@@ -161,10 +161,11 @@ def load_dataset(args, max_frames, n_frames):
     return data
 
 
-def postprocess(motions, model, args, prefix_save: str = 'prefix_'):
+def postprocess(motions, model, data, args, prefix_save: str = 'prefix_'):
 
     # Recover XYZ *positions* from HumanML3D vector representation
     if model.data_rep == 'hml_vec':
+        n_joints = 22
         motions = data.dataset.t2m_dataset.inv_transform(motions.cpu().permute(0, 2, 3, 1)).float()
         motions = recover_from_ric(motions, n_joints)
         motions = motions.view(-1, *motions.shape[2:]).permute(0, 2, 3, 1).cpu().numpy()

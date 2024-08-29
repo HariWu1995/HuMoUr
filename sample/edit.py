@@ -1,5 +1,12 @@
-from src.mdm.edit import main as edit_pipe
+import os
+import shutil
+import numpy as np
+
+from src.mdm.edit import main as edit_pipe, recover_from_ric
 from src.mdm.utils.parser_util import edit_args
+
+from src.mdm.data_loaders.humanml.utils.plot_script import plot_3d_motion
+import src.mdm.data_loaders.humanml.utils.paramUtil as paramUtil
 
 
 def main():
@@ -19,7 +26,9 @@ def main():
         shutil.rmtree(out_path)
     os.makedirs(out_path)
 
-    all_motions, all_text, all_lengths = edit_pipe(args)
+    all_motions, all_text, all_lengths, \
+        data, model_kwargs, \
+        gt_frames_per_sample, n_joints, fps = edit_pipe(args)
 
     npy_path = os.path.join(out_path, 'results.npy')
     print(f"saving results file to [{npy_path}]")
@@ -36,7 +45,8 @@ def main():
         fw.write('\n'.join([str(l) for l in all_lengths]))
 
     print(f"saving visualizations to [{out_path}]...")
-    skeleton = paramUtil.kit_kinematic_chain if args.dataset == 'kit' else paramUtil.t2m_kinematic_chain
+    skeleton = paramUtil.kit_kinematic_chain if args.dataset == 'kit' else \
+               paramUtil.t2m_kinematic_chain
 
     # Recover XYZ *positions* from HumanML3D vector representation
     if model.data_rep == 'hml_vec':
@@ -46,7 +56,8 @@ def main():
 
     for sample_i in range(args.num_samples):
         caption = 'Input Motion'
-        length = model_kwargs['y']['lengths'][sample_i]
+        input_lengths = model_kwargs['y']['lengths']
+        length = input_lengths[sample_i]
         motion = input_motions[sample_i].transpose(2, 0, 1)[:length]
 
         save_file = 'input_motion{:02d}.mp4'.format(sample_i)
@@ -59,23 +70,24 @@ def main():
                        gt_frames=gt_frames_per_sample.get(sample_i, []))
 
         for rep_i in range(args.num_repetitions):
-            caption = all_text[rep_i*args.batch_size + sample_i]
+            caption = all_text[rep_i * args.batch_size + sample_i]
             if caption == '':
                 caption = 'Edit [{}] unconditioned'.format(args.edit_mode)
             else:
                 caption = 'Edit [{}]: {}'.format(args.edit_mode, caption)
                 
-            length = all_lengths[rep_i*args.batch_size + sample_i]
-            motion = all_motions[rep_i*args.batch_size + sample_i].transpose(2, 0, 1)[:length]
+            length = all_lengths[rep_i * args.batch_size + sample_i]
+            motion = all_motions[rep_i * args.batch_size + sample_i].transpose(2, 0, 1)[:length]
             save_file = 'sample{:02d}_rep{:02d}.mp4'.format(sample_i, rep_i)
             animation_save_path = os.path.join(out_path, save_file)
             rep_files.append(animation_save_path)
             
+            # Credit for visualization: 
+            #   https://github.com/EricGuo5513/text-to-motion
             print(f'[({sample_i}) "{caption}" | Rep #{rep_i} | -> {save_file}]')
             plot_3d_motion(animation_save_path, skeleton, motion, title=caption,
                            dataset=args.dataset, fps=fps, vis_mode=args.edit_mode,
                            gt_frames=gt_frames_per_sample.get(sample_i, []))
-            # Credit for visualization: https://github.com/EricGuo5513/text-to-motion
 
         all_rep_save_file = os.path.join(out_path, 'sample{:02d}.mp4'.format(sample_i))
         ffmpeg_rep_files = [f' -i {f} ' for f in rep_files]

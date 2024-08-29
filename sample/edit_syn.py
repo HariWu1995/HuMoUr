@@ -1,5 +1,11 @@
+import os
+import shutil
+import numpy as np
+
 from src.mdm_syn.edit import main as edit_pipe
 from src.mdm_syn.utils.parser_util import edit_args
+
+from src.mdm_syn.data_loaders.humanml.utils.plot_script import plot_3d_motion
 
 
 def main():
@@ -18,7 +24,7 @@ def main():
 
     setattr(args, 'out_path', out_path)
     all_motions, all_text, all_lengths, \
-    input_motions, skeleton, gt_frames_per_sample = edit_pipe(args)
+    input_motions, skeleton, data, gt_frames_per_sample, n_joints, fps = edit_pipe(args)
 
     npy_path = os.path.join(out_path, 'results.npy')
     print(f"saving results file to [{npy_path}]")
@@ -49,14 +55,13 @@ def main():
                        dataset=args.dataset, fps=fps, vis_mode='gt',
                        gt_frames=gt_frames_per_sample.get(sample_i, []))
 
-        caption = all_text[0*args.batch_size + sample_i]
+        length = all_lengths[0 * args.batch_size + sample_i]
+        motion = all_motions[0 * args.batch_size + sample_i].transpose(2, 0, 1)[:length]
+        caption  =  all_text[0 * args.batch_size + sample_i]
         if caption == '':
             caption = 'Edit [{}] unconditioned'.format(args.edit_mode)
         else:
             caption = 'Edit: {}'.format(args.edit_mode)
-
-        length = all_lengths[0 *args.batch_size + sample_i]
-        motion = all_motions[0 *args.batch_size + sample_i].transpose(2, 0, 1)[:length]
 
         save_file = 'sample{:02d}_rep{:02d}.mp4'.format(sample_i, 0)
         animation_save_path = os.path.join(out_path, save_file)

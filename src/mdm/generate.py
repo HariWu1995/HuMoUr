@@ -17,10 +17,8 @@ from src.mdm.utils.parser_util import generate_args
 
 from src.mdm.model.cfg_sampler import ClassifierFreeSampleModel
 
-import src.mdm.data_loaders.humanml.utils.paramUtil as paramUtil
 from src.mdm.data_loaders.tensors import collate
 from src.mdm.data_loaders.get_data import get_dataset_loader
-from src.mdm.data_loaders.humanml.utils.plot_script import plot_3d_motion
 from src.mdm.data_loaders.humanml.scripts.motion_process import recover_from_ric
 
 
@@ -147,70 +145,19 @@ def main(args):
             text_key = 'text' if 'text' in model_kwargs['y'] else 'action_text'
             all_text += model_kwargs['y'][text_key]
 
+        length = model_kwargs['y']['lengths']
+        all_lengths.append(length.cpu().numpy())
         all_motions.append(sample.cpu().numpy())
-        all_lengths.append(model_kwargs['y']['lengths'].cpu().numpy())
 
         print(f"created {len(all_motions) * args.batch_size} samples")
 
+    all_lengths = np.concatenate(all_lengths, axis=0)[:total_num_samples]
     all_motions = np.concatenate(all_motions, axis=0)
     all_motions = all_motions[:total_num_samples]  # [bs, njoints, 6, seqlen]
-    all_text = all_text[:total_num_samples]
-    all_lengths = np.concatenate(all_lengths, axis=0)[:total_num_samples]
+    all_text    =    all_text[:total_num_samples]
 
-    return all_motions, all_text, all_lengths
-
-
-def save_multiple_samples(args, out_path, row_print_template, all_print_template, 
-                                          row_file_template, all_file_template,
-                          caption, num_samples_in_out_file, rep_files, sample_files, sample_i):
-    
-    all_rep_save_file = row_file_template.format(sample_i)
-    all_rep_save_path = os.path.join(out_path, all_rep_save_file)
-
-    ffmpeg_rep_files = [f' -i {f} ' for f in rep_files]
-    hstack_args = f' -filter_complex hstack=inputs={args.num_repetitions}' if args.num_repetitions > 1 else ''
-    ffmpeg_rep_cmd = f'ffmpeg -y -loglevel warning ' + ''.join(ffmpeg_rep_files) + f'{hstack_args} {all_rep_save_path}'
-    
-    os.system(ffmpeg_rep_cmd)
-    print(row_print_template.format(caption, sample_i, all_rep_save_file))
-    sample_files.append(all_rep_save_path)
-    
-    if (sample_i + 1) % num_samples_in_out_file == 0 or sample_i + 1 == args.num_samples:
-        # all_sample_save_file =  f'samples_{(sample_i - len(sample_files) + 1):02d}_to_{sample_i:02d}.mp4'
-        all_sample_save_file = all_file_template.format(sample_i - len(sample_files) + 1, sample_i)
-        all_sample_save_path = os.path.join(out_path, all_sample_save_file)
-        
-        print(all_print_template.format(sample_i - len(sample_files) + 1, sample_i, all_sample_save_file))
-        
-        ffmpeg_rep_files = [f' -i {f} ' for f in sample_files]
-        vstack_args = f' -filter_complex vstack=inputs={len(sample_files)}' if len(sample_files) > 1 else ''
-        ffmpeg_rep_cmd = f'ffmpeg -y -loglevel warning ' + ''.join(
-            ffmpeg_rep_files) + f'{vstack_args} {all_sample_save_path}'
-        
-        os.system(ffmpeg_rep_cmd)
-        sample_files = []
-    return sample_files
-
-
-def construct_template_variables(unconstrained):
-    row_file_template = 'sample{:02d}.mp4'
-    all_file_template = 'samples_{:02d}_to_{:02d}.mp4'
-    
-    if unconstrained:
-        sample_file_template = 'row{:02d}_col{:02d}.mp4'
-        sample_print_template = '[{} row #{:02d} column #{:02d} | -> {}]'
-        row_file_template = row_file_template.replace('sample', 'row')
-        row_print_template = '[{} row #{:02d} | all columns | -> {}]'
-        all_file_template = all_file_template.replace('samples', 'rows')
-        all_print_template = '[rows {:02d} to {:02d} | -> {}]'
-    else:
-        sample_file_template = 'sample{:02d}_rep{:02d}.mp4'
-        sample_print_template = '["{}" ({:02d}) | Rep #{:02d} | -> {}]'
-        row_print_template = '[ "{}" ({:02d}) | all repetitions | -> {}]'
-        all_print_template = '[samples {:02d} to {:02d} | all repetitions | -> {}]'
-
-    return sample_print_template, row_print_template, all_print_template, \
-           sample_file_template, row_file_template, all_file_template
+    return all_motions, all_text, all_lengths, \
+            data, model_kwargs, gt_frames_per_sample, n_joints, fps
 
 
 def load_dataset(args, max_frames, n_frames):
