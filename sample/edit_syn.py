@@ -24,7 +24,8 @@ def main():
 
     setattr(args, 'out_path', out_path)
     all_motions, all_text, all_lengths, \
-    input_motions, skeleton, data, gt_frames_per_sample, n_joints, fps = edit_pipe(args)
+    input_motions, skeleton, data, model_kwargs, \
+        gt_frames_per_sample, n_joints, fps = edit_pipe(args)
 
     npy_path = os.path.join(out_path, 'results.npy')
     print(f"saving results file to [{npy_path}]")

@@ -282,7 +282,8 @@ def main(args):
         num_joints = 22 if motions.shape[1] == 263 else 21
 
     return all_motions, all_text, all_lengths, \
-         input_motions, skeleton, data, gt_frames_per_sample, num_joints, fps
+         input_motions, skeleton, data, model_kwargs, \
+            gt_frames_per_sample, num_joints, fps
 
 
 def load_dataset(args, max_frames, n_frames):
