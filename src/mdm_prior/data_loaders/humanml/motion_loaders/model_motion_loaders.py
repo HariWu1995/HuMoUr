@@ -13,7 +13,7 @@ from src.mdm_prior.data_loaders.humanml.motion_loaders.comp_v6_model_dataset imp
 )
 
 
-DEPENDENCIES_DIR = os.environ.get('DEPENDENCIES_DIR', '.')
+DEPENDENCY_DIR = os.environ.get('DEPENDENCY_DIR', '.')
 
 
 def collate_fn(batch):
@@ -63,7 +63,7 @@ def get_motion_loader(opt_path, batch_size, ground_truth_dataset, mm_num_samples
 
     # Currently the configurations of two datasets are almost the same
     if opt.dataset_name == 't2m' or opt.dataset_name == 'kit':
-        w_vectorizer = WordVectorizer(f'{DEPENDENCIES_DIR}/glove', 'our_vab')
+        w_vectorizer = WordVectorizer(f'{DEPENDENCY_DIR}/glove', 'our_vab')
     else:
         raise KeyError('Dataset not recognized!!')
     print('Generating %s ...' % opt.name)

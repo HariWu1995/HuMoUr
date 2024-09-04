@@ -25,7 +25,7 @@ MOTION_TYPES = [
 ]
 
 DATASET_ROOT_DIR = os.environ.get('DATASET_ROOT_DIR', './dataset')
-DEPENDENCIES_DIR = os.environ.get('DEPENDENCIES_DIR', '.')
+DEPENDENCY_DIR = os.environ.get('DEPENDENCY_DIR', '.')
 
 
 def collate_fn(batch):
@@ -1216,7 +1216,7 @@ class HumanML3D(data.Dataset):
         if load_mode == 'text_only':
             self.t2m_dataset = TextOnlyDataset(self.opt, self.mean, self.std, self.split_file, **kwargs)
         else:
-            self.w_vectorizer = WordVectorizer(pjoin(DEPENDENCIES_DIR, 'glove'), 'our_vab')
+            self.w_vectorizer = WordVectorizer(pjoin(DEPENDENCY_DIR, 'glove'), 'our_vab')
 
             if hasattr(opt, 'dataset_type') and opt.dataset_type == 'pw3d':
                 self.t2m_dataset = PW3D_Text2MotionDatasetV2(self.opt, self.mean, self.std, self.split, self.w_vectorizer)
@@ -1314,7 +1314,7 @@ class BABEL_eval(data.Dataset):
         DATA = BABEL_MotionDatasetV2 if load_mode == 'movement_train' \
           else BABEL_Text2MotionDatasetV2
 
-        self.w_vectorizer = WordVectorizer(pjoin(DEPENDENCIES_DIR, 'glove'), 'our_vab')
+        self.w_vectorizer = WordVectorizer(pjoin(DEPENDENCY_DIR, 'glove'), 'our_vab')
         self.t2m_dataset = DATA(
             split=self.split,
             datapath=self.datapath,

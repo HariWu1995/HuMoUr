@@ -8,7 +8,6 @@ from io import BytesIO
 from PIL import Image
 
 import base64
-import bpy
 
 
 def image_to_base64(image: Image.Image):
@@ -25,14 +24,15 @@ def base64_to_image(data):
 
 
 def fbx_to_bvh(in_file, out_file):
-
+    
+    import bpy
     bpy.ops.import_scene.fbx(filepath=in_file)
 
     action = bpy.data.actions[-1]
 
     # checking because of Kfir's code
     assert  (action.frame_range[0] < 9999) \
-        and (action.frame_range[1] > -9999), 
+        and (action.frame_range[1] > -9999), \
             f"action.frame_range = {action.frame_range} is out-of-range"  
     
     bpy.ops.export_anim.bvh(filepath=out_file,

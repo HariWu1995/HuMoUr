@@ -17,7 +17,7 @@ from src.mdm_prior.data_loaders.humanml.scripts.motion_process import *
 from src.mdm_prior.data_loaders.humanml.utils.word_vectorizer import WordVectorizer, POS_enumerator
 
 
-DEPENDENCIES_DIR = os.environ.get('DEPENDENCIES_DIR', '.')
+DEPENDENCY_DIR = os.environ.get('DEPENDENCY_DIR', '.')
 
 
 def build_models(opt):
@@ -123,7 +123,7 @@ if __name__ == '__main__':
                                         batch_size=opt.batch_size, num_frames=480,  # not in use
                                         split='val', load_mode='evaluator_train', opt=opt)
     else:
-        w_vectorizer = WordVectorizer(f'{DEPENDENCIES_DIR}/glove', 'our_vab')
+        w_vectorizer = WordVectorizer(f'{DEPENDENCY_DIR}/glove', 'our_vab')
         mean = np.load(pjoin(meta_root, 'mean.npy'))
         std = np.load(pjoin(meta_root, 'std.npy'))
 

@@ -1,6 +1,6 @@
-TAGS:
-  - name: HuMoRapiD
-    description: API-Wrapper for Human Motion diffusion model
+DESCRIPTION:
+  title: HuMoRapiD
+  overview: API-Wrapper for Human Motion Diffusion Nodels
 
 VERSION: 1.0.0
 
@@ -10,15 +10,29 @@ SERVER:
   log_level: info
   workers: 
 
-DESCRIPTION:
-  title: HuMoRapiD
-  overview: API-Wrapper for Human Motion Diffusion Nodels
+ICON:
+  url: assets/favicon.ico
 
-PARAMETERS:
+TAGS:
+  - name: Main
+    description: Main API functions.
+  - name: Configuration
+    description: Configuration for Models, Datasets, etc.
+  - name: Resources
+    description: Resources Control, especially GPU.
+  - name: Test
+    description: Some tests for API, unnecessary for main functions.
+
+ARGUMENTS:
+
+  DEPENDENCY_DIR: "path/to/dependencies, which contains sub-folders such as assets, body_models, glove, kit, t2m."
+  SMPL_DATA_ROOT: "path/to/body_models, which contains sub-folders such as smpl, smplh, smplx, mano."
 
   MODEL_DIR: "Path to folder containing model checkpoints"
-  cuda_device: GPU Id to load Model(s)
+  cuda_device: "GPU Id to load Model(s) into."
   cpu_offload: "Whether to offload all models to CPU, reducing memory usage with a low impact on performance.\nMore details: find `enable_model_cpu_offload` in `https://huggingface.co/docs/diffusers/en/api/pipelines/overview`"
 
-  face_image: "Image of face"
-  pose_image: "Image of human pose to swap face with 'face_image'"
+  
+
+  prompt_positive: "Description of what you desire to INCLUDE in output"
+  prompt_negative: "Description of what you desire to EXCLUDE in output"
