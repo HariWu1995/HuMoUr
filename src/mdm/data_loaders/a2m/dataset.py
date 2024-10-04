@@ -75,6 +75,7 @@ class Dataset(torch.utils.data.Dataset):
             all_action_names = list(all_action_names.values())
             assert list(self._action_classes.keys()) == list(range(len(all_action_names)))  # the keys should be ordered from 0 to num_actions
 
+        # TODO: use text-embeddings to measure similarity
         sorter = np.argsort(all_action_names)
         actions = sorter[np.searchsorted(all_action_names, action_name, sorter=sorter)]
         return actions

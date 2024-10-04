@@ -84,7 +84,8 @@ def main(args):
         iterator = iter(data)
         _, model_kwargs = next(iterator)
     else:
-        collate_args = [{'inp': torch.zeros(n_frames), 'tokens': None, 'lengths': n_frames}] * args.num_samples
+        collate_args = {'inp': torch.zeros(n_frames), 'tokens': None, 'lengths': n_frames}
+        collate_args = [collate_args] * args.num_samples
         is_t2m = any([args.input_text, args.text_prompt])
         if is_t2m:
             # t2m

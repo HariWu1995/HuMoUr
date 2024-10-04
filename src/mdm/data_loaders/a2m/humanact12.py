@@ -5,6 +5,22 @@ import numpy as np
 from .dataset import Dataset
 
 
+humanact12_coarse_action_enumerator = {
+     0: "warm-up",
+     1: "walk",
+     2: "run",
+     3: "jump",
+     4: "drink",
+     5: "lift-dumbbell",
+     6: "sit",
+     7: "eat",
+     8: "turn-steering-wheel",
+     9: "phone",
+    10: "boxing",
+    11: "throw",
+}
+
+
 class HumanAct12Poses(Dataset):
     
     dataname = "humanact12"
@@ -19,10 +35,9 @@ class HumanAct12Poses(Dataset):
         data = pkl.load(open(datafilepath, "rb"))
 
         self._pose = [x for x in data["poses"]]
-        self._num_frames_in_video = [p.shape[0] for p in self._pose]
         self._joints = [x for x in data["joints3D"]]
-
         self._actions = [x for x in data["y"]]
+        self._num_frames_in_video = [p.shape[0] for p in self._pose]
 
         total_num_actions = 12
         self.num_actions = total_num_actions
@@ -42,19 +57,3 @@ class HumanAct12Poses(Dataset):
     def _load_rotvec(self, ind, frame_ix):
         pose = self._pose[ind][frame_ix].reshape(-1, 24, 3)
         return pose
-
-
-humanact12_coarse_action_enumerator = {
-    0: "warm_up",
-    1: "walk",
-    2: "run",
-    3: "jump",
-    4: "drink",
-    5: "lift_dumbbell",
-    6: "sit",
-    7: "eat",
-    8: "turn steering wheel",
-    9: "phone",
-    10: "boxing",
-    11: "throw",
-}

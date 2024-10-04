@@ -7,7 +7,7 @@ import random
 import argparse
 import traceback
 from zipfile import ZipFile, ZipInfo, ZIP_DEFLATED
-from typing import Union, Literal, List, Tuple
+from typing import Union, Literal, List, Tuple, Optional
 
 import PIL
 from PIL import Image
@@ -26,6 +26,7 @@ from fastapi.openapi.docs import get_swagger_ui_html
 from fastapi.middleware.cors import CORSMiddleware
 
 from api.templates import OutputAPI
+from api.action_names import all_actions
 
 from src.utils.io_util import load_config, load_multipart_file
 from src.utils.dtype_util import image_to_base64
@@ -77,8 +78,8 @@ MODEL_CONFIG = dict(
                        'Babel_TrasnEmb_GeoLoss': 850_000, },
     humodel_t2cm_opt = {'pw3d_prefix' : 240_000, 
                         'pw3d_text'   : 100_000, },
-    humodel_ctrl_opt = {'left_wrist'  : 280_000,
-                        'right_foot'  : 280_000,
+    humodel_ctrl_opt = {  'left_wrist': 280_000,
+                          'right_foot': 280_000,
                         'root_horizon': 280_000, },
     humodel_m2m_opt = { 'mixamo/0000_Breakdance_Freezes'    : 60_000,
                         'mixamo/0001_Capoeira'              : 60_000,
@@ -123,13 +124,13 @@ ANIMODEL_MAP = dict(
 #         API Setup         #
 #############################
 
-API_CONFIG = load_config(path='./api/config.yaml')
 API_RESPONDER = OutputAPI()
+API_CONFIG = load_config(path='./api/config.yaml')
 
 app = FastAPI(
       root_path =  os.getenv("ROOT_PATH"), 
-          title = API_CONFIG['DESCRIPTION']['title'],
-    description = API_CONFIG['DESCRIPTION']['overview'],
+          title = API_CONFIG['INFO']['title'],
+    description = API_CONFIG['INFO']['intro'],
    openapi_tags = API_CONFIG['TAGS'],
         version = API_CONFIG['VERSION'],
        docs_url = None, 
@@ -138,8 +139,8 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,         # https://fastapi.tiangolo.com/tutorial/cors/
-    allow_origins=['*'],    # https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Access-Control-Allow-Origin
     allow_credentials=True, # https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Access-Control-Allow-Credentials
+    allow_origins=['*'],    # https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Access-Control-Allow-Origin
     allow_methods=['*'],    # https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Access-Control-Allow-Methods
     allow_headers=['*'],    # https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Access-Control-Allow-Headers
 )
@@ -257,76 +258,49 @@ async def _config_datasets(
     return response
 
 
-# @app.post("/generate", tags=["Main"])
-# async def generate(
-#           face_image: UploadFile = \
-#                             File(description=API_CONFIG['ARGUMENTS']['face_image'], media_type='multipart/form-data'),
-#           pose_image: UploadFile = \
-#                             File(description=API_CONFIG['ARGUMENTS']['pose_image'], media_type='multipart/form-data'),
-#       mask_strength : float = Form(description=API_CONFIG['ARGUMENTS']['mask_strength'], default=0.99), 
-#       mask_padding_W:   int = Form(description=API_CONFIG['ARGUMENTS']['mask_padding_W'], default=19), 
-#       mask_padding_H:   int = Form(description=API_CONFIG['ARGUMENTS']['mask_padding_H'], default=11), 
-#       mask_threshold: float = Form(description=API_CONFIG['ARGUMENTS']['mask_threshold'], default=0.33), 
-#              prompt: str = Form(description=API_CONFIG['ARGUMENTS']['prompt_positive'], default=PROMPT_POSITIVE), 
-#     ):
+@app.post("/api/generate", tags=["Main"])
+async def _api_generate(
+        action: Literal[all_actions] = \
+                        Form(description=API_CONFIG['ARGUMENTS']['action_name'], default=None), 
+        prompt:  str = Form(description=API_CONFIG['ARGUMENTS']['prompt_positive'], default=None), 
+      is_multi: bool = Form(description=API_CONFIG['ARGUMENTS']['prompt_multiple'], default=False), 
+    model_ckpt: Literal[] = \
+                        Form(description=API_CONFIG['ARGUMENTS']['model_ckpt'], default=False), 
+    ):
 
-#     try:        
-#         # Preprocess
-#         filename = face_image.filename
-#         file_ext = os.path.splitext(filename)[1].lower()
+    try:
+        print(f"\n\n\naction = {action} - prompt = {prompt}")
 
-#         if file_ext not in [".png", ".jpg", ".jpeg"]:
-#             raise TypeError(f"{filename} with type")
+        # Load arguments and pipeline
+        if is_multi:
+            from src.mdm_prior.sequentialize import main as generate_pipe
+            from src.mdm_prior.utils.parser_util import generate_args
 
-#         face_image = await face_image.read()
-#         face_image = Image.open(BytesIO(face_image)).convert('RGB')
+        else:
+            from src.mdm.generate import main as generate_pipe
+            from src.mdm.utils.parser_util import generate_args
 
-#         pose_image = await pose_image.read()
-#         pose_image = Image.open(BytesIO(pose_image)).convert('RGB')
+        # Run pipeline
+        if prompt is not None:
 
-#         # Run pipeline
-#         generated_image = swap_face_only()
+            if is_multi:
+                print('\nRunning text-to-motions ...')
 
-#         # Response
-#         print('\nResponding ...')
-#         if return_output_only:
-#             if isinstance(generated_image, np.ndarray):
-#                 image_in_bytes = generated_image.tobytes()
-#             elif isinstance(generated_image, PIL.Image.Image):
-#                 image_in_bytes = BytesIO()
-#                 generated_image.save(image_in_bytes, format='PNG')
-#                 image_in_bytes = image_in_bytes.getvalue()
-#             else:
-#                 raise TypeError(f"Type of output = {generated_image.__class__} is not supported!")
+            else:
+                print('\nRunning text-to-motion ...')
 
-#             response = Response(content=image_in_bytes, media_type="image/png")
-#             # response = API_RESPONDER.result(is_successful=True, data=results)
+        elif action is not None:
+            print('\nRunning action-to-motion ...')
+
+        else:
+            raise ValueError('Either `action` or `prompt` MUST be NOT null')
+
+        response = API_RESPONDER.result(is_successful=True, data={})
         
-#         else:
-#             if isinstance(generated_image, np.ndarray):
-#                 generated_image = Image.fromarray(generated_image.astype(np.uint8))
-#             generated_image.save('logs/output.png')
+    except Exception as e:
+        response = API_RESPONDER.result(is_successful=False, err_log=traceback.format_exc())
 
-#             images_fn = ['bbox.png','segment.png','contour.png','mask.png','output.png',
-#                          'portrait.png','portrait_mask.png','portrait_kpts.png']
-                
-#             buffer = BytesIO()
-#             archive = ZipFile(buffer, mode='w', compression=ZIP_DEFLATED)
-#             # archive.setpassword(b"secret")
-#             for fname in images_fn:
-#                 archive.write('logs/'+fname)
-#             archive.close()
-
-#             return StreamingResponse(
-#                 iter([buffer.getvalue()]), 
-#                 media_type="application/x-zip-compressed", 
-#                 headers={"Content-Disposition": "attachment; filename=images.zip"}
-#             )
-
-#     except Exception as e:
-#         response = API_RESPONDER.result(is_successful=False, err_log=traceback.format_exc())
-
-#     return response
+    return response
 
 
 @app.post("/resources/clear", tags=["Resources"])

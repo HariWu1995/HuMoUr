@@ -7,7 +7,7 @@ import torch
 # from torch.utils.data import Dataset
 
 from .dataset import Dataset
-import utils.rotation_conversions as geometry
+import src.utils.rotation_conversions as geometry
 
 
 action2motion_joints = [8, 1, 2, 3, 4, 5, 6, 7, 0, 9, 10, 11, 12, 13, 14, 21, 24, 38]
@@ -56,7 +56,6 @@ class UESTC(Dataset):
     dataname = "uestc"
 
     def __init__(self, datapath="dataset/uestc", method_name="vibe", view="all", **kargs):
-
         self.datapath = datapath
         self.method_name = method_name
         self.view = view
@@ -70,12 +69,12 @@ class UESTC(Dataset):
 
         # Out of 118 subjects -> 51 training, 67 in test
         all_subjects = np.arange(1, 119)
-        self._tr_subjects = [
+        self._train_subjects = [
             1, 2, 6, 12, 13, 16, 21, 24, 28, 29, 30, 31, 33, 35, 39, 41, 42, 45, 
             47, 50, 52, 54, 55, 57, 59, 61, 63, 64, 67, 69, 70, 71, 73, 77, 81, 
             84, 86, 87, 88, 90, 91, 93, 96, 99, 102, 103, 104, 107, 108, 112, 113,
         ]
-        self._test_subjects = [s for s in all_subjects if s not in self._tr_subjects]
+        self._test_subjects = [s for s in all_subjects if s not in self._train_subjects]
 
         # Load names of 25600 videos
         with open(os.path.join(datapath, 'info', 'names.txt'), 'r') as f:
@@ -166,7 +165,7 @@ class UESTC(Dataset):
             # add the global translation to the joints
             self._joints[index] = self._joints[index] + self._globtrans[index][:, None]
 
-            if subject in self._tr_subjects:
+            if subject in self._train_subjects:
                 self._train.append(index)
             elif subject in self._test_subjects:
                 self._test.append(index)
@@ -213,16 +212,15 @@ class UESTC(Dataset):
     def _get_action_view_subject_side(self, videopath):
         # TODO: Can be moved to tools.py
         spl = videopath.split('_')
-        action = int(spl[0][1:])
-        view = int(spl[1][1:])
+        action  = int(spl[0][1:])
+        view    = int(spl[1][1:])
         subject = int(spl[2][1:])
-        side = int(spl[3][1:])
+        side    = int(spl[3][1:])
         return action, view, subject, side
 
     def _get_videopath(self, action, view, subject, side):
         # Unused function
-        return 'a{:d}_d{:d}_p{:03d}_c{:d}_color.avi'.format(
-            action, view, subject, side)
+        return 'a{:d}_d{:d}_p{:03d}_c{:d}_color.avi'.format(action, view, subject, side)
 
     def parse_action(self, path, return_int=True):
         # Override parent method
